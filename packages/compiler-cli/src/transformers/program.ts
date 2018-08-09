@@ -102,7 +102,7 @@ const defaultEmitCallback: TsEmitCallback =
  * Minimum supported TypeScript version
  * ∀ supported typescript version v, v >= MIN_TS_VERSION
  */
-const MIN_TS_VERSION = '2.7.2';
+const MIN_TS_VERSION = '3.0.1';
 
 /**
  * Supremum of supported TypeScript versions
