@@ -268,8 +268,7 @@ describe('ng program', () => {
     });
 
     if (!isInBazel()) {
-      // TODO: check why with TypeScript 3.0.1 the structure is not reused.
-      xit('should reuse the old ts program completely if nothing changed', () => {
+      it('should reuse the old ts program completely if nothing changed', () => {
         testSupport.writeFiles({'src/index.ts': createModuleAndCompSource('main')});
         // Note: the second compile drops factories for library files,
         // and therefore changes the structure again
@@ -279,7 +278,7 @@ describe('ng program', () => {
         expect(tsStructureIsReused(p2.getTsProgram())).toBe(StructureIsReused.Completely);
       });
 
-      xit('should reuse the old ts program completely if a template or a ts file changed', () => {
+      it('should reuse the old ts program completely if a template or a ts file changed', () => {
         testSupport.writeFiles({
           'src/main.ts': createModuleAndCompSource('main', 'main.html'),
           'src/main.html': `Some template`,
@@ -301,7 +300,7 @@ describe('ng program', () => {
         expect(tsStructureIsReused(p2.getTsProgram())).toBe(StructureIsReused.Completely);
       });
 
-      xit('should not reuse the old ts program if an import changed', () => {
+      it('should not reuse the old ts program if an import changed', () => {
         testSupport.writeFiles({
           'src/main.ts': createModuleAndCompSource('main'),
           'src/util.ts': `export const x = 1`,
