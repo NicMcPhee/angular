@@ -267,13 +267,14 @@ describe('ng program', () => {
           .toBe(false);
     });
 
-    if (!isInBazel()) {
-      it('should reuse the old ts program completely if nothing changed', () => {
+    fdescribe('reuse tests', () => {
+      fit('should reuse the old ts program completely if nothing changed', () => {
         testSupport.writeFiles({'src/index.ts': createModuleAndCompSource('main')});
         // Note: the second compile drops factories for library files,
         // and therefore changes the structure again
         const p1 = compile().program;
         const p2 = compile(p1).program;
+        debugger;
         compile(p2);
         expect(tsStructureIsReused(p2.getTsProgram())).toBe(StructureIsReused.Completely);
       });
@@ -318,7 +319,7 @@ describe('ng program', () => {
         compile(p2);
         expect(tsStructureIsReused(p2.getTsProgram())).toBe(StructureIsReused.SafeModules);
       });
-    }
+    });
 
   });
 
