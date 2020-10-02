@@ -1,122 +1,23 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
 import {InjectionToken} from '../di/injection_token';
-import {Injector} from '../di/injector';
 import {ViewEncapsulation} from '../metadata/view';
+import {injectRenderer2 as render3InjectRenderer2} from '../render3/view_engine_compatibility';
+import {noop} from '../util/noop';
 
-/**
- * @deprecated Use `RendererType2` (and `Renderer2`) instead.
- */
-export class RenderComponentType {
-  constructor(
-      public id: string, public templateUrl: string, public slotCount: number,
-      public encapsulation: ViewEncapsulation, public styles: Array<string|any[]>,
-      public animations: any) {}
-}
-
-/**
- * @deprecated Debug info is handeled internally in the view engine now.
- */
-export abstract class RenderDebugInfo {
-  abstract get injector(): Injector;
-  abstract get component(): any;
-  abstract get providerTokens(): any[];
-  abstract get references(): {[key: string]: any};
-  abstract get context(): any;
-  abstract get source(): string;
-}
-
-/**
- * @deprecated Use the `Renderer2` instead.
- */
-export interface DirectRenderer {
-  remove(node: any): void;
-  appendChild(node: any, parent: any): void;
-  insertBefore(node: any, refNode: any): void;
-  nextSibling(node: any): any;
-  parentElement(node: any): any;
-}
-
-/**
- * @deprecated Use the `Renderer2` instead.
- */
-export abstract class Renderer {
-  abstract selectRootElement(selectorOrNode: string|any, debugInfo?: RenderDebugInfo): any;
-
-  abstract createElement(parentElement: any, name: string, debugInfo?: RenderDebugInfo): any;
-
-  abstract createViewRoot(hostElement: any): any;
-
-  abstract createTemplateAnchor(parentElement: any, debugInfo?: RenderDebugInfo): any;
-
-  abstract createText(parentElement: any, value: string, debugInfo?: RenderDebugInfo): any;
-
-  abstract projectNodes(parentElement: any, nodes: any[]): void;
-
-  abstract attachViewAfter(node: any, viewRootNodes: any[]): void;
-
-  abstract detachView(viewRootNodes: any[]): void;
-
-  abstract destroyView(hostElement: any, viewAllNodes: any[]): void;
-
-  abstract listen(renderElement: any, name: string, callback: Function): Function;
-
-  abstract listenGlobal(target: string, name: string, callback: Function): Function;
-
-  abstract setElementProperty(renderElement: any, propertyName: string, propertyValue: any): void;
-
-  abstract setElementAttribute(renderElement: any, attributeName: string, attributeValue: string):
-      void;
-
-  /**
-   * Used only in debug mode to serialize property changes to dom nodes as attributes.
-   */
-  abstract setBindingDebugInfo(renderElement: any, propertyName: string, propertyValue: string):
-      void;
-
-  abstract setElementClass(renderElement: any, className: string, isAdd: boolean): void;
-
-  abstract setElementStyle(renderElement: any, styleName: string, styleValue: string): void;
-
-  abstract invokeElementMethod(renderElement: any, methodName: string, args?: any[]): void;
-
-  abstract setText(renderNode: any, text: string): void;
-
-  abstract animate(
-      element: any, startingStyles: any, keyframes: any[], duration: number, delay: number,
-      easing: string, previousPlayers?: any[]): any;
-}
 
 export const Renderer2Interceptor = new InjectionToken<Renderer2[]>('Renderer2Interceptor');
 
 /**
- * Injectable service that provides a low-level interface for modifying the UI.
- *
- * Use this service to bypass Angular's templating and make custom UI changes that can't be
- * expressed declaratively. For example if you need to set a property or an attribute whose name is
- * not statically known, use {@link Renderer#setElementProperty setElementProperty} or
- * {@link Renderer#setElementAttribute setElementAttribute} respectively.
- *
- * If you are implementing a custom renderer, you must implement this interface.
- *
- * The default Renderer implementation is `DomRenderer`. Also available is `WebWorkerRenderer`.
- *
- * @deprecated Use `RendererFactory2` instead.
- */
-export abstract class RootRenderer {
-  abstract renderComponent(componentType: RenderComponentType): Renderer;
-}
-
-/**
  * Used by `RendererFactory2` to associate custom rendering data and styles
  * with a rendering implementation.
- *  @experimental
+ *  @publicApi
  */
 export interface RendererType2 {
   /**
@@ -149,7 +50,7 @@ export interface RendererType2 {
 /**
  * Creates and initializes a custom renderer that implements the `Renderer2` base class.
  *
- * @experimental
+ * @publicApi
  */
 export abstract class RendererFactory2 {
   /**
@@ -176,9 +77,12 @@ export abstract class RendererFactory2 {
 
 /**
  * Flags for renderer-specific style modifiers.
- * @experimental
+ * @publicApi
  */
 export enum RendererStyleFlags2 {
+  // TODO(misko): This needs to be refactored into a separate file so that it can be imported from
+  // `node_manipulation.ts` Currently doing the import cause resolution order to change and fails
+  // the tests. The work around is to have hard coded value in `node_manipulation.ts` for now.
   /**
    * Marks a style as important.
    */
@@ -202,7 +106,7 @@ export enum RendererStyleFlags2 {
  * not statically known, use the `setProperty()` or
  * `setAttribute()` method.
  *
- * @experimental
+ * @publicApi
  */
 export abstract class Renderer2 {
   /**
@@ -241,7 +145,7 @@ export abstract class Renderer2 {
    * This is used as a performance optimization for production mode.
    */
   // TODO(issue/24571): remove '!'.
-  destroyNode !: ((node: any) => void) | null;
+  destroyNode!: ((node: any) => void)|null;
   /**
    * Appends a child to a given parent node in the host element DOM.
    * @param parent The parent node.
@@ -253,22 +157,28 @@ export abstract class Renderer2 {
    * in the host element DOM.
    * @param parent The parent node.
    * @param newChild The new child nodes.
-   * @param refChild The existing child node that should precede the new node.
+   * @param refChild The existing child node before which `newChild` is inserted.
    */
   abstract insertBefore(parent: any, newChild: any, refChild: any): void;
   /**
    * Implement this callback to remove a child node from the host element's DOM.
    * @param parent The parent node.
    * @param oldChild The child node to remove.
+   * @param isHostElement Optionally signal to the renderer whether this element is a host element
+   * or not
    */
-  abstract removeChild(parent: any, oldChild: any): void;
+  abstract removeChild(parent: any, oldChild: any, isHostElement?: boolean): void;
   /**
    * Implement this callback to prepare an element to be bootstrapped
    * as a root element, and return the element instance.
    * @param selectorOrNode The DOM element.
+   * @param preserveContent Whether the contents of the root element
+   * should be preserved, or cleared upon bootstrap (default behavior).
+   * Use with `ViewEncapsulation.ShadowDom` to allow simple native
+   * content projection via `<slot>` elements.
    * @returns The root element.
    */
-  abstract selectRootElement(selectorOrNode: string|any): any;
+  abstract selectRootElement(selectorOrNode: string|any, preserveContent?: boolean): any;
   /**
    * Implement this callback to get the parent of a given node
    * in the host element's DOM.
@@ -362,4 +272,15 @@ export abstract class Renderer2 {
   abstract listen(
       target: 'window'|'document'|'body'|any, eventName: string,
       callback: (event: any) => boolean | void): () => void;
+
+  /**
+   * @internal
+   * @nocollapse
+   */
+  static __NG_ELEMENT_ID__: () => Renderer2 = () => SWITCH_RENDERER2_FACTORY();
 }
+
+
+export const SWITCH_RENDERER2_FACTORY__POST_R3__ = render3InjectRenderer2;
+const SWITCH_RENDERER2_FACTORY__PRE_R3__ = noop;
+const SWITCH_RENDERER2_FACTORY: typeof render3InjectRenderer2 = SWITCH_RENDERER2_FACTORY__PRE_R3__;

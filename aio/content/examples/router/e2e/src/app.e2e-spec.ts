@@ -1,10 +1,8 @@
-'use strict'; // necessary for es6 output in node
-
 import { browser, element, by, ExpectedConditions } from 'protractor';
 
 const numDashboardTabs = 5;
 const numCrises = 4;
-const numHeroes = 6;
+const numHeroes = 10;
 const EC = ExpectedConditions;
 
 describe('Router', () => {
@@ -13,33 +11,35 @@ describe('Router', () => {
 
   function getPageStruct() {
     const hrefEles = element.all(by.css('app-root > nav a'));
-    const crisisDetail = element.all(by.css('app-root > ng-component > ng-component > ng-component > div')).first();
-    const heroDetail = element(by.css('app-root > ng-component > div'));
+    const crisisDetail = element.all(by.css('app-root > div > app-crisis-center > app-crisis-list > app-crisis-detail > div')).first();
+    const heroDetail = element(by.css('app-root > div > app-hero-detail'));
 
     return {
       hrefs: hrefEles,
       activeHref: element(by.css('app-root > nav a.active')),
 
       crisisHref: hrefEles.get(0),
-      crisisList: element.all(by.css('app-root > ng-component > ng-component li')),
-      crisisDetail: crisisDetail,
+      crisisList: element.all(by.css('app-root > div > app-crisis-center > app-crisis-list li')),
+      crisisDetail,
       crisisDetailTitle: crisisDetail.element(by.xpath('*[1]')),
 
       heroesHref: hrefEles.get(1),
-      heroesList: element.all(by.css('app-root > ng-component li')),
-      heroDetail: heroDetail,
-      heroDetailTitle: heroDetail.element(by.xpath('*[1]')),
+      heroesList: element.all(by.css('app-root > div > app-hero-list li')),
+      heroDetail,
+      heroDetailTitle: heroDetail.element(by.xpath('*[2]')),
 
       adminHref: hrefEles.get(2),
-      adminPreloadList: element.all(by.css('app-root > ng-component > ng-component > ul > li')),
+      adminPage: element(by.css('app-root > div > app-admin')),
+      adminPreloadList: element.all(by.css('app-root > div > app-admin > app-admin-dashboard > ul > li')),
 
       loginHref: hrefEles.get(3),
-      loginButton: element.all(by.css('app-root > ng-component > p > button')),
+      loginButton: element.all(by.css('app-root > div > app-login > p > button')),
 
       contactHref: hrefEles.get(4),
       contactCancelButton: element.all(by.buttonText('Cancel')),
 
-      outletComponents: element.all(by.css('app-root > ng-component'))
+      primaryOutlet: element.all(by.css('app-root > div > app-hero-list')),
+      secondaryOutlet: element.all(by.css('app-root > app-compose-message'))
     };
   }
 
@@ -98,22 +98,25 @@ describe('Router', () => {
   it('saves changed hero details', async () => {
     const page = getPageStruct();
     await page.heroesHref.click();
+    await browser.sleep(600);
     const heroEle = page.heroesList.get(4);
-    let text = await heroEle.getText();
+    const text = await heroEle.getText();
     expect(text.length).toBeGreaterThan(0, 'hero item text length');
     // remove leading id from text
     const heroText = text.substr(text.indexOf(' ')).trim();
 
     await heroEle.click();
+    await browser.sleep(600);
     expect(page.heroesList.count()).toBe(0, 'hero list count');
     expect(page.heroDetail.isPresent()).toBe(true, 'hero detail');
     expect(page.heroDetailTitle.getText()).toContain(heroText);
-    let inputEle = page.heroDetail.element(by.css('input'));
+    const inputEle = page.heroDetail.element(by.css('input'));
     await inputEle.sendKeys('-foo');
     expect(page.heroDetailTitle.getText()).toContain(heroText + '-foo');
 
-    let buttonEle = page.heroDetail.element(by.css('button'));
+    const buttonEle = page.heroDetail.element(by.css('button'));
     await buttonEle.click();
+    await browser.sleep(600);
     expect(heroEle.getText()).toContain(heroText + '-foo');
   });
 
@@ -130,14 +133,40 @@ describe('Router', () => {
     const page = getPageStruct();
     await page.heroesHref.click();
     await page.contactHref.click();
-    expect(page.outletComponents.count()).toBe(2, 'route count');
+    expect(page.primaryOutlet.count()).toBe(1, 'primary outlet');
+    expect(page.secondaryOutlet.count()).toBe(1, 'secondary outlet');
+  });
+
+  it('should redirect with secondary route', async () => {
+    const page = getPageStruct();
+
+    // go to login page and login
+    await browser.get('');
+    await page.loginHref.click();
+    await page.loginButton.click();
+
+    // open secondary outlet
+    await page.contactHref.click();
+
+    // go to login page and logout
+    await page.loginHref.click();
+    await page.loginButton.click();
+
+    // attempt to go to admin page, redirects to login with secondary outlet open
+    await page.adminHref.click();
+
+    // login, get redirected back to admin with outlet still open
+    await page.loginButton.click();
+
+    expect(await page.adminPage.isDisplayed()).toBeTruthy();
+    expect(page.secondaryOutlet.count()).toBeTruthy();
   });
 
   async function crisisCenterEdit(index: number, save: boolean) {
     const page = getPageStruct();
     await page.crisisHref.click();
     let crisisEle = page.crisisList.get(index);
-    let text = await crisisEle.getText();
+    const text = await crisisEle.getText();
     expect(text.length).toBeGreaterThan(0, 'crisis item text length');
     // remove leading id from text
     const crisisText = text.substr(text.indexOf(' ')).trim();
@@ -145,10 +174,10 @@ describe('Router', () => {
     await crisisEle.click();
     expect(page.crisisDetail.isPresent()).toBe(true, 'crisis detail present');
     expect(page.crisisDetailTitle.getText()).toContain(crisisText);
-    let inputEle = page.crisisDetail.element(by.css('input'));
+    const inputEle = page.crisisDetail.element(by.css('input'));
     await inputEle.sendKeys('-foo');
 
-    let buttonEle = page.crisisDetail.element(by.buttonText(save ? 'Save' : 'Cancel'));
+    const buttonEle = page.crisisDetail.element(by.buttonText(save ? 'Save' : 'Cancel'));
     await buttonEle.click();
     crisisEle = page.crisisList.get(index);
     if (save) {

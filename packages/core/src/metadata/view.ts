@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -11,6 +11,12 @@
  *
  * See {@link Component#encapsulation encapsulation}.
  *
+ * @usageNotes
+ * ### Example
+ *
+ * {@example core/ts/metadata/encapsulation.ts region='longform'}
+ *
+ * @publicApi
  */
 export enum ViewEncapsulation {
   /**
@@ -42,9 +48,6 @@ export enum ViewEncapsulation {
    * For the DOM this means using modern [Shadow
    * DOM](https://w3c.github.io/webcomponents/spec/shadow/) and
    * creating a ShadowRoot for Component's Host Element.
-   *
-   * ### Example
-   * {@example core/ts/metadata/encapsulation.ts region='longform'}
    */
   ShadowDom = 3
 }

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -26,14 +26,17 @@ describe('integration test: public api', () => {
     _warn = null;
   });
 
-  it('should handle empty files',
-     () => { check('test/fixtures/empty.d.ts', 'test/fixtures/empty_expected.d.ts'); });
+  it('should handle empty files', () => {
+    check('test/fixtures/empty.d.ts', 'test/fixtures/empty_expected.d.ts');
+  });
 
-  it('should include symbols',
-     () => { check('test/fixtures/simple.d.ts', 'test/fixtures/simple_expected.d.ts'); });
+  it('should include symbols', () => {
+    check('test/fixtures/simple.d.ts', 'test/fixtures/simple_expected.d.ts');
+  });
 
-  it('should include symbols reexported explicitly',
-     () => { check('test/fixtures/reexported.d.ts', 'test/fixtures/reexported_expected.d.ts'); });
+  it('should include symbols reexported explicitly', () => {
+    check('test/fixtures/reexported.d.ts', 'test/fixtures/reexported_expected.d.ts');
+  });
 
   it('should include symbols reexported with *', () => {
     check('test/fixtures/reexported_star.d.ts', 'test/fixtures/reexported_star_expected.d.ts');
@@ -43,6 +46,12 @@ describe('integration test: public api', () => {
     check(
         'test/fixtures/classes_and_interfaces.d.ts',
         'test/fixtures/classes_and_interfaces_expected.d.ts');
+  });
+
+  it('should include value and type', () => {
+    check(
+        'test/fixtures/exports_type_and_value.d.ts',
+        'test/fixtures/exports_type_and_value_expected.d.ts');
   });
 
   it('should include members reexported classes', () => {
@@ -89,7 +98,9 @@ describe('integration test: generateGoldenFile', () => {
     }
   });
 
-  afterEach(() => { unlinkRecursively(outDir); });
+  afterEach(() => {
+    unlinkRecursively(outDir);
+  });
 
 
   it('should generate a golden file', () => {

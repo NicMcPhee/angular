@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -52,10 +52,11 @@ import {AnimationPlayer} from './players/animation_player';
  * }
  * ```
  *
+ * @publicApi
  */
 export abstract class AnimationBuilder {
   /**
-   * Builds a factory for producing a defined animation. 
+   * Builds a factory for producing a defined animation.
    * @param animation A reusable animation definition.
    * @returns A factory object that can create a player for the defined animation.
    * @see `animate()`
@@ -66,6 +67,7 @@ export abstract class AnimationBuilder {
 /**
  * A factory object returned from the `AnimationBuilder`.`build()` method.
  *
+ * @publicApi
  */
 export abstract class AnimationFactory {
   /**

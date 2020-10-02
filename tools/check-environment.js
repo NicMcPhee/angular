@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -21,11 +21,6 @@ var exec = require('child_process').exec;
 var checkNodeModules;
 var semver;
 var issues = [];
-
-// coarse Node version check
-if (+process.version[1] < 5) {
-  issues.push('Angular build currently requires Node 5+. Use nvm to update your node version.');
-}
 
 try {
   semver = require('semver');
@@ -72,8 +67,8 @@ function checkEnvironment(reqs) {
 
     if (!semver.satisfies(foundNodeVersion, reqs.requiredNodeVersion)) {
       issues.push(
-          'You are running unsupported node version. Found: ' + foundNodeVersion + ' Expected: ' +
-          reqs.requiredNodeVersion + '. Use nvm to update your node version.');
+          'You are running unsupported node version. Found: ' + foundNodeVersion +
+          ' Expected: ' + reqs.requiredNodeVersion + '. Use nvm to update your node version.');
     }
 
     if (yarnErr) {
@@ -104,7 +99,9 @@ function printWarning(issues) {
   console.warn('');
   console.warn('!'.repeat(110));
   console.warn('!!!  Your environment is not in a good shape. Following issues were found:');
-  issues.forEach(function(issue) { console.warn('!!!   - ' + issue); });
+  issues.forEach(function(issue) {
+    console.warn('!!!   - ' + issue);
+  });
   console.warn('!'.repeat(110));
   console.warn('');
 

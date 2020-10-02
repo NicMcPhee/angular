@@ -23,11 +23,11 @@ describe('providers App', () => {
 
   it('should display header that says Users list', () => {
     page.navigateTo();
-    expect(page.getParagraphText()).toEqual('Users list');
+    expect(page.getTitleText()).toEqual('Users list');
   });
 
 
-  it('shows a list of customers', function() {
+  it('shows a list of customers', () => {
     const list = getListSectionStruct();
     expect(list.items.count()).toBe(10);
     expect(list.items.get(0).getText()).toBe('1 Maria');

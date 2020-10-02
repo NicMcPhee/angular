@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -24,9 +24,12 @@ let _fakeAsyncTestZoneSpec: any = null;
  * Clears out the shared fake async zone for a test.
  * To be called in a global `beforeEach`.
  *
- * @experimental
+ * @publicApi
  */
 export function resetFakeAsyncZoneFallback() {
+  if (_fakeAsyncTestZoneSpec) {
+    _fakeAsyncTestZoneSpec.unlockDatePatch();
+  }
   _fakeAsyncTestZoneSpec = null;
   // in node.js testing we may not have ProxyZoneSpec in which case there is nothing to reset.
   ProxyZoneSpec && ProxyZoneSpec.assertPresent().resetDelegate();
@@ -51,11 +54,11 @@ let _inFakeAsyncCall = false;
  * @param fn
  * @returns The function wrapped to be executed in the fakeAsync zone
  *
- * @experimental
+ * @publicApi
  */
 export function fakeAsyncFallback(fn: Function): (...args: any[]) => any {
   // Not using an arrow function to preserve context passed from call site
-  return function(...args: any[]) {
+  return function(this: unknown, ...args: any[]) {
     const proxyZoneSpec = ProxyZoneSpec.assertPresent();
     if (_inFakeAsyncCall) {
       throw new Error('fakeAsync() calls can not be nested');
@@ -73,6 +76,7 @@ export function fakeAsyncFallback(fn: Function): (...args: any[]) => any {
       let res: any;
       const lastProxyZoneSpec = proxyZoneSpec.getDelegate();
       proxyZoneSpec.setDelegate(_fakeAsyncTestZoneSpec);
+      _fakeAsyncTestZoneSpec.lockDatePatch();
       try {
         res = fn.apply(this, args);
         flushMicrotasksFallback();
@@ -116,10 +120,13 @@ function _getFakeAsyncZoneSpec(): any {
  *
  * {@example core/testing/ts/fake_async.ts region='basic'}
  *
- * @experimental
+ * @publicApi
  */
-export function tickFallback(millis: number = 0): void {
-  _getFakeAsyncZoneSpec().tick(millis);
+export function tickFallback(
+    millis: number = 0, tickOptions: {processNewMacroTasksSynchronously: boolean} = {
+      processNewMacroTasksSynchronously: true
+    }): void {
+  _getFakeAsyncZoneSpec().tick(millis, null, tickOptions);
 }
 
 /**
@@ -130,7 +137,7 @@ export function tickFallback(millis: number = 0): void {
  * @param maxTurns
  * @returns The simulated time elapsed, in millis.
  *
- * @experimental
+ * @publicApi
  */
 export function flushFallback(maxTurns?: number): number {
   return _getFakeAsyncZoneSpec().flush(maxTurns);
@@ -139,7 +146,7 @@ export function flushFallback(maxTurns?: number): number {
 /**
  * Discard all remaining periodic tasks.
  *
- * @experimental
+ * @publicApi
  */
 export function discardPeriodicTasksFallback(): void {
   const zoneSpec = _getFakeAsyncZoneSpec();
@@ -149,7 +156,7 @@ export function discardPeriodicTasksFallback(): void {
 /**
  * Flush any pending microtasks.
  *
- * @experimental
+ * @publicApi
  */
 export function flushMicrotasksFallback(): void {
   _getFakeAsyncZoneSpec().flushMicrotasks();

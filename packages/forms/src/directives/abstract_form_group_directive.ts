@@ -1,12 +1,12 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {OnDestroy, OnInit} from '@angular/core';
+import {Directive, OnDestroy, OnInit} from '@angular/core';
 
 import {FormGroup} from '../model';
 
@@ -18,51 +18,91 @@ import {AsyncValidatorFn, ValidatorFn} from './validators';
 
 
 /**
- * This is a base class for code shared between `NgModelGroup` and `FormGroupName`.
+ * @description
+ * A base class for code shared between the `NgModelGroup` and `FormGroupName` directives.
  *
- *
+ * @publicApi
  */
+@Directive()
 export class AbstractFormGroupDirective extends ControlContainer implements OnInit, OnDestroy {
-  /** @internal */
+  /**
+   * @description
+   * The parent control for the group
+   *
+   * @internal
+   */
   // TODO(issue/24571): remove '!'.
-  _parent !: ControlContainer;
+  _parent!: ControlContainer;
 
-  /** @internal */
+  /**
+   * @description
+   * An array of synchronous validators for the group
+   *
+   * @internal
+   */
   // TODO(issue/24571): remove '!'.
-  _validators !: any[];
+  _validators!: any[];
 
-  /** @internal */
+  /**
+   * @description
+   * An array of async validators for the group
+   *
+   * @internal
+   */
   // TODO(issue/24571): remove '!'.
-  _asyncValidators !: any[];
+  _asyncValidators!: any[];
 
+  /** @nodoc */
   ngOnInit(): void {
     this._checkParentType();
-    this.formDirective !.addFormGroup(this);
+    // Register the group with its parent group.
+    this.formDirective!.addFormGroup(this);
   }
 
+  /** @nodoc */
   ngOnDestroy(): void {
     if (this.formDirective) {
+      // Remove the group from its parent group.
       this.formDirective.removeFormGroup(this);
     }
   }
 
   /**
-   * Get the `FormGroup` backing this binding.
+   * @description
+   * The `FormGroup` bound to this directive.
    */
-  get control(): FormGroup { return this.formDirective !.getFormGroup(this); }
+  get control(): FormGroup {
+    return this.formDirective!.getFormGroup(this);
+  }
 
   /**
-   * Get the path to this control group.
+   * @description
+   * The path to this group from the top-level directive.
    */
-  get path(): string[] { return controlPath(this.name, this._parent); }
+  get path(): string[] {
+    return controlPath(this.name == null ? this.name : this.name.toString(), this._parent);
+  }
 
   /**
-   * Get the `Form` to which this group belongs.
+   * @description
+   * The top-level directive for this group if present, otherwise null.
    */
-  get formDirective(): Form|null { return this._parent ? this._parent.formDirective : null; }
+  get formDirective(): Form|null {
+    return this._parent ? this._parent.formDirective : null;
+  }
 
-  get validator(): ValidatorFn|null { return composeValidators(this._validators); }
+  /**
+   * @description
+   * The synchronous validators registered with this group.
+   */
+  get validator(): ValidatorFn|null {
+    return composeValidators(this._validators);
+  }
 
+  /**
+   * @description
+   * The async validators registered with this group.
+   */
   get asyncValidator(): AsyncValidatorFn|null {
     return composeAsyncValidators(this._asyncValidators);
   }

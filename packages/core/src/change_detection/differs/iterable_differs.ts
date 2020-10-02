@@ -1,29 +1,30 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {defineInjectable} from '../../di/defs';
+import {ɵɵdefineInjectable} from '../../di/interface/defs';
+import {StaticProvider} from '../../di/interface/provider';
 import {Optional, SkipSelf} from '../../di/metadata';
-import {StaticProvider} from '../../di/provider';
 import {DefaultIterableDifferFactory} from '../differs/default_iterable_differ';
+
 
 
 /**
  * A type describing supported iterable types.
  *
- *
+ * @publicApi
  */
-export type NgIterable<T> = Array<T>| Iterable<T>;
+export type NgIterable<T> = Array<T>|Iterable<T>;
 
 /**
  * A strategy for tracking changes over time to an iterable. Used by {@link NgForOf} to
  * respond to changes in an iterable by effecting equivalent changes in the DOM.
  *
- *
+ * @publicApi
  */
 export interface IterableDiffer<V> {
   /**
@@ -33,14 +34,14 @@ export interface IterableDiffer<V> {
    * @returns an object describing the difference. The return value is only valid until the next
    * `diff()` invocation.
    */
-  diff(object: NgIterable<V>): IterableChanges<V>|null;
+  diff(object: NgIterable<V>|undefined|null): IterableChanges<V>|null;
 }
 
 /**
  * An object describing the changes in the `Iterable` collection since last time
  * `IterableDiffer#diff()` was invoked.
  *
- *
+ * @publicApi
  */
 export interface IterableChanges<V> {
   /**
@@ -85,15 +86,17 @@ export interface IterableChanges<V> {
   /** Iterate over all removed items. */
   forEachRemovedItem(fn: (record: IterableChangeRecord<V>) => void): void;
 
-  /** Iterate over all items which had their identity (as computed by the `TrackByFunction`)
-   * changed. */
+  /**
+   * Iterate over all items which had their identity (as computed by the `TrackByFunction`)
+   * changed.
+   */
   forEachIdentityChange(fn: (record: IterableChangeRecord<V>) => void): void;
 }
 
 /**
  * Record representing the item change information.
  *
- *
+ * @publicApi
  */
 export interface IterableChangeRecord<V> {
   /** Current index of the item in `Iterable` or null if removed. */
@@ -110,22 +113,21 @@ export interface IterableChangeRecord<V> {
 }
 
 /**
- * @deprecated v4.0.0 - Use IterableChangeRecord instead.
- */
-export interface CollectionChangeRecord<V> extends IterableChangeRecord<V> {}
-
-/**
- * An optional function passed into {@link NgForOf} that defines how to track
- * items in an iterable (e.g. fby index or id)
+ * An optional function passed into the `NgForOf` directive that defines how to track
+ * changes for items in an iterable.
+ * The function takes the iteration index and item ID.
+ * When supplied, Angular tracks changes by the return value of the function.
  *
- *
+ * @publicApi
  */
-export interface TrackByFunction<T> { (index: number, item: T): any; }
+export interface TrackByFunction<T> {
+  (index: number, item: T): any;
+}
 
 /**
  * Provides a factory for {@link IterableDiffer}.
  *
- *
+ * @publicApi
  */
 export interface IterableDifferFactory {
   supports(objects: any): boolean;
@@ -135,9 +137,12 @@ export interface IterableDifferFactory {
 /**
  * A repository of different iterable diffing strategies used by NgFor, NgClass, and others.
  *
+ * @publicApi
  */
 export class IterableDiffers {
-  static ngInjectableDef = defineInjectable({
+  /** @nocollapse */
+  static ɵprov = ɵɵdefineInjectable({
+    token: IterableDiffers,
     providedIn: 'root',
     factory: () => new IterableDiffers([new DefaultIterableDifferFactory()])
   });
@@ -146,7 +151,9 @@ export class IterableDiffers {
    * @deprecated v4.0.0 - Should be private
    */
   factories: IterableDifferFactory[];
-  constructor(factories: IterableDifferFactory[]) { this.factories = factories; }
+  constructor(factories: IterableDifferFactory[]) {
+    this.factories = factories;
+  }
 
   static create(factories: IterableDifferFactory[], parent?: IterableDiffers): IterableDiffers {
     if (parent != null) {
@@ -199,8 +206,8 @@ export class IterableDiffers {
     if (factory != null) {
       return factory;
     } else {
-      throw new Error(
-          `Cannot find a differ supporting object '${iterable}' of type '${getTypeNameForDebugging(iterable)}'`);
+      throw new Error(`Cannot find a differ supporting object '${iterable}' of type '${
+          getTypeNameForDebugging(iterable)}'`);
     }
   }
 }

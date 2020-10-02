@@ -2,13 +2,15 @@
 {% import "lib/paramList.html" as params -%}
 
 <section class="{$ doc.docType $}-overview">
-  <code-example hideCopy="true" class="no-box api-heading">{{ {$ doc.valueParam.name $}_expression | <span class="kwd nocode">{$ doc.pipeName $}</span>
+  <code-example hideCopy="true" class="no-box api-heading{% if doc.deprecated %} deprecated-api-item{% endif %}">{{ {$ doc.valueParam.name $}_expression | <span class="kwd nocode">{$ doc.pipeName $}</span>
     {%- for param in doc.pipeParams %}
       {%- if param.isOptional or param.defaultValue !== undefined %} [{% endif %} : {$ param.name $}
     {%- endfor %}
     {%- for param in doc.pipeParams %}
       {%- if param.isOptional or param.defaultValue !== undefined %} ]{% endif %}
     {%- endfor %} }}</code-example>
+
+  {% include "includes/ngmodule.html" %}
 
   {% if doc.valueParam.type %}
   <h2>Input value</h2>

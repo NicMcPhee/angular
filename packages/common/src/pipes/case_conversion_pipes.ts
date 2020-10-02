@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -21,15 +21,19 @@ import {invalidPipeArgumentError} from './invalid_pipe_argument_error';
  *
  * <code-example path="common/pipes/ts/lowerupper_pipe.ts" region='LowerUpperPipe'></code-example>
  *
- *
+ * @ngModule CommonModule
+ * @publicApi
  */
 @Pipe({name: 'lowercase'})
 export class LowerCasePipe implements PipeTransform {
   /**
    * @param value The string to transform to lower case.
    */
-  transform(value: string): string {
-    if (!value) return value;
+  transform(value: string): string;
+  transform(value: null|undefined): null;
+  transform(value: string|null|undefined): string|null;
+  transform(value: string|null|undefined): string|null {
+    if (value == null) return null;
     if (typeof value !== 'string') {
       throw invalidPipeArgumentError(LowerCasePipe, value);
     }
@@ -51,7 +55,7 @@ const unicodeWordMatch =
 
 /**
  * Transforms text to title case.
- * Capitalizes the first letter of each word, and transforms the
+ * Capitalizes the first letter of each word and transforms the
  * rest of the word to lower case.
  * Words are delimited by any whitespace character, such as a space, tab, or line-feed character.
  *
@@ -63,15 +67,19 @@ const unicodeWordMatch =
  *
  * <code-example path="common/pipes/ts/titlecase_pipe.ts" region='TitleCasePipe'></code-example>
  *
- *
+ * @ngModule CommonModule
+ * @publicApi
  */
 @Pipe({name: 'titlecase'})
 export class TitleCasePipe implements PipeTransform {
   /**
    * @param value The string to transform to title case.
    */
-  transform(value: string): string {
-    if (!value) return value;
+  transform(value: string): string;
+  transform(value: null|undefined): null;
+  transform(value: string|null|undefined): string|null;
+  transform(value: string|null|undefined): string|null {
+    if (value == null) return null;
     if (typeof value !== 'string') {
       throw invalidPipeArgumentError(TitleCasePipe, value);
     }
@@ -85,14 +93,20 @@ export class TitleCasePipe implements PipeTransform {
  * Transforms text to all upper case.
  * @see `LowerCasePipe`
  * @see `TitleCasePipe`
+ *
+ * @ngModule CommonModule
+ * @publicApi
  */
 @Pipe({name: 'uppercase'})
 export class UpperCasePipe implements PipeTransform {
   /**
    * @param value The string to transform to upper case.
    */
-  transform(value: string): string {
-    if (!value) return value;
+  transform(value: string): string;
+  transform(value: null|undefined): null;
+  transform(value: string|null|undefined): string|null;
+  transform(value: string|null|undefined): string|null {
+    if (value == null) return null;
     if (typeof value !== 'string') {
       throw invalidPipeArgumentError(UpperCasePipe, value);
     }

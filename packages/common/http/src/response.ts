@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -11,7 +11,7 @@ import {HttpHeaders} from './headers';
 /**
  * Type enumeration for the different kinds of `HttpEvent`.
  *
- *
+ * @publicApi
  */
 export enum HttpEventType {
   /**
@@ -48,7 +48,7 @@ export enum HttpEventType {
 /**
  * Base interface for progress events.
  *
- *
+ * @publicApi
  */
 export interface HttpProgressEvent {
   /**
@@ -71,7 +71,7 @@ export interface HttpProgressEvent {
 /**
  * A download progress event.
  *
- *
+ * @publicApi
  */
 export interface HttpDownloadProgressEvent extends HttpProgressEvent {
   type: HttpEventType.DownloadProgress;
@@ -87,7 +87,7 @@ export interface HttpDownloadProgressEvent extends HttpProgressEvent {
 /**
  * An upload progress event.
  *
- *
+ * @publicApi
  */
 export interface HttpUploadProgressEvent extends HttpProgressEvent {
   type: HttpEventType.UploadProgress;
@@ -98,9 +98,11 @@ export interface HttpUploadProgressEvent extends HttpProgressEvent {
  * when a request may be retried multiple times, to distinguish between
  * retries on the final event stream.
  *
- *
+ * @publicApi
  */
-export interface HttpSentEvent { type: HttpEventType.Sent; }
+export interface HttpSentEvent {
+  type: HttpEventType.Sent;
+}
 
 /**
  * A user-defined event.
@@ -108,9 +110,11 @@ export interface HttpSentEvent { type: HttpEventType.Sent; }
  * Grouping all custom events under this type ensures they will be handled
  * and forwarded by all implementations of interceptors.
  *
- *
+ * @publicApi
  */
-export interface HttpUserEvent<T> { type: HttpEventType.User; }
+export interface HttpUserEvent<T> {
+  type: HttpEventType.User;
+}
 
 /**
  * An error that represents a failed attempt to JSON.parse text coming back
@@ -130,15 +134,15 @@ export interface HttpJsonParseError {
  *
  * Typed according to the expected type of the response.
  *
- *
+ * @publicApi
  */
 export type HttpEvent<T> =
-    HttpSentEvent | HttpHeaderResponse | HttpResponse<T>| HttpProgressEvent | HttpUserEvent<T>;
+    HttpSentEvent|HttpHeaderResponse|HttpResponse<T>|HttpProgressEvent|HttpUserEvent<T>;
 
 /**
  * Base class for both `HttpResponse` and `HttpHeaderResponse`.
  *
- *
+ * @publicApi
  */
 export abstract class HttpResponseBase {
   /**
@@ -172,7 +176,7 @@ export abstract class HttpResponseBase {
    * Type of the response, narrowed to either the full response or the header.
    */
   // TODO(issue/24571): remove '!'.
-  readonly type !: HttpEventType.Response | HttpEventType.ResponseHeader;
+  readonly type!: HttpEventType.Response|HttpEventType.ResponseHeader;
 
   /**
    * Super-constructor for all responses.
@@ -207,7 +211,7 @@ export abstract class HttpResponseBase {
  * `HttpHeaderResponse` is a `HttpEvent` available on the response
  * event stream, only when progress events are requested.
  *
- *
+ * @publicApi
  */
 export class HttpHeaderResponse extends HttpResponseBase {
   /**
@@ -248,7 +252,7 @@ export class HttpHeaderResponse extends HttpResponseBase {
  * `HttpResponse` is a `HttpEvent` available on the response event
  * stream.
  *
- *
+ * @publicApi
  */
 export class HttpResponse<T> extends HttpResponseBase {
   /**
@@ -260,7 +264,11 @@ export class HttpResponse<T> extends HttpResponseBase {
    * Construct a new `HttpResponse`.
    */
   constructor(init: {
-    body?: T | null, headers?: HttpHeaders; status?: number; statusText?: string; url?: string;
+    body?: T|null,
+    headers?: HttpHeaders;
+    status?: number;
+    statusText?: string;
+    url?: string;
   } = {}) {
     super(init);
     this.body = init.body !== undefined ? init.body : null;
@@ -272,10 +280,18 @@ export class HttpResponse<T> extends HttpResponseBase {
   clone(update: {headers?: HttpHeaders; status?: number; statusText?: string; url?: string;}):
       HttpResponse<T>;
   clone<V>(update: {
-    body?: V | null, headers?: HttpHeaders; status?: number; statusText?: string; url?: string;
+    body?: V|null,
+    headers?: HttpHeaders;
+    status?: number;
+    statusText?: string;
+    url?: string;
   }): HttpResponse<V>;
   clone(update: {
-    body?: any | null; headers?: HttpHeaders; status?: number; statusText?: string; url?: string;
+    body?: any|null;
+    headers?: HttpHeaders;
+    status?: number;
+    statusText?: string;
+    url?: string;
   } = {}): HttpResponse<any> {
     return new HttpResponse<any>({
       body: (update.body !== undefined) ? update.body : this.body,
@@ -298,7 +314,7 @@ export class HttpResponse<T> extends HttpResponseBase {
  * will contain either a wrapped Error object or the error response returned
  * from the server.
  *
- *
+ * @publicApi
  */
 export class HttpErrorResponse extends HttpResponseBase implements Error {
   readonly name = 'HttpErrorResponse';
@@ -311,7 +327,11 @@ export class HttpErrorResponse extends HttpResponseBase implements Error {
   readonly ok = false;
 
   constructor(init: {
-    error?: any; headers?: HttpHeaders; status?: number; statusText?: string; url?: string;
+    error?: any;
+    headers?: HttpHeaders;
+    status?: number;
+    statusText?: string;
+    url?: string;
   }) {
     // Initialize with a default status of 0 / Unknown Error.
     super(init, 0, 'Unknown Error');
@@ -322,8 +342,8 @@ export class HttpErrorResponse extends HttpResponseBase implements Error {
     if (this.status >= 200 && this.status < 300) {
       this.message = `Http failure during parsing for ${init.url || '(unknown url)'}`;
     } else {
-      this.message =
-          `Http failure response for ${init.url || '(unknown url)'}: ${init.status} ${init.statusText}`;
+      this.message = `Http failure response for ${init.url || '(unknown url)'}: ${init.status} ${
+          init.statusText}`;
     }
     this.error = init.error || null;
   }

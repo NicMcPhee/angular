@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -13,6 +13,5 @@
 /// <reference types="jasminewd2" />
 /// <reference types="node" />
 /// <reference types="zone.js" />
-/// <reference path="../tools/types-ext/jasminewd2.d.ts" />
-/// <reference path="./es6-subset.d.ts" />
+/// <reference lib="es2015" />
 /// <reference path="./system.d.ts" />

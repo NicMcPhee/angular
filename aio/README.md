@@ -6,6 +6,7 @@ Everything in this folder is part of the documentation project. This includes
 * the dgeni configuration for converting source files to rendered files that can be viewed in the web site.
 * the tooling for setting up examples for development; and generating live-example and zip files from the examples.
 
+<a name="developer-tasks"></a>
 ## Developer tasks
 
 We use [Yarn](https://yarnpkg.com) to manage the dependencies and to run build tasks.
@@ -14,16 +15,18 @@ Here are the most important tasks you might need to use:
 
 * `yarn` - install all the dependencies.
 * `yarn setup` - install all the dependencies, boilerplate, stackblitz, zips and run dgeni on the docs.
-* `yarn setup-local` - same as `setup`, but use the locally built Angular packages for aio and docs examples boilerplate.
+* `yarn setup-local` - same as `setup`, but build the Angular packages from the source code and use these locally built versions (instead of the ones fetched from npm) for aio and docs examples boilerplate.
 
 * `yarn build` - create a production build of the application (after installing dependencies, boilerplate, etc).
 * `yarn build-local` - same as `build`, but use `setup-local` instead of `setup`.
+* `yarn build-local-with-viewengine` - same as `build-local`, but in addition also turns on `ViewEngine` (pre-Ivy) mode in aio.
+                                       (Note: To turn on `ViewEngine` mode in docs examples, see `yarn boilerplate:add:viewengine` below.)
 
 * `yarn start` - run a development web server that watches the files; then builds the doc-viewer and reloads the page, as necessary.
 * `yarn serve-and-sync` - run both the `docs-watch` and `start` in the same console.
 * `yarn lint` - check that the doc-viewer code follows our style rules.
-* `yarn test` - run all the unit tests once.
-* `yarn test --watch` - watch all the source files, for the doc-viewer, and run all the unit tests when any change.
+* `yarn test` - watch all the source files, for the doc-viewer, and run all the unit tests when any change.
+* `yarn test --watch=false` - run all the unit tests once.
 * `yarn e2e` - run all the e2e tests for the doc-viewer.
 
 * `yarn docs` - generate all the docs from the source files.
@@ -31,39 +34,35 @@ Here are the most important tasks you might need to use:
 * `yarn docs-lint` - check that the doc gen code follows our style rules.
 * `yarn docs-test` - run the unit tests for the doc generation code.
 
-* `yarn boilerplate:add` - generate all the boilerplate code for the examples, so that they can be run locally. Add the option `--local` to use your local version of Angular contained in the "dist" folder.
+* `yarn boilerplate:add` - generate all the boilerplate code for the examples, so that they can be run locally.
+* `yarn boilerplate:add:viewengine` - same as `boilerplate:add` but also turns on `ViewEngine` (pre-Ivy) mode.
+
 * `yarn boilerplate:remove` - remove all the boilerplate code that was added via `yarn boilerplate:add`.
 * `yarn generate-stackblitz` - generate the stackblitz files that are used by the `live-example` tags in the docs.
 * `yarn generate-zips` - generate the zip files from the examples. Zip available via the `live-example` tags in the docs.
 
-* `yarn example-e2e` - run all e2e tests for examples
-  - `yarn example-e2e --setup` - force webdriver update & other setup, then run tests
-  - `yarn example-e2e --filter=foo` - limit e2e tests to those containing the word "foo"
-  - `yarn example-e2e --setup --local` - run e2e tests with the local version of Angular contained in the "dist" folder
+* `yarn example-e2e` - run all e2e tests for examples. Available options:
+  - `--setup`: generate boilerplate, force webdriver update & other setup, then run tests.
+  - `--local`: run e2e tests with the local version of Angular contained in the "dist" folder.
+               _Requires `--setup` in order to take effect._
+  - `--viewengine`: run e2e tests in `ViewEngine` (pre-Ivy) mode.
+  - `--filter=foo`: limit e2e tests to those containing the word "foo".
 
-* `yarn build-ie-polyfills` - generates a js file of polyfills that can be loaded in Internet Explorer.
-
-## Developing on Windows
-The `packages/` directory may contain Linux-specific symlinks, which are not recognized by Windows.
-These unresolved links cause the docs generation process to fail because it cannot locate certain files.
-
-> Hint: The following steps require administration rights or [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development) enabled!
-
-To fix this problem, run `scripts/windows/create-symlinks.sh`. This command creates temporary files where the symlinks used to be. Make sure not to commit those files with your documentation changes.
-When you are done making and testing your documentation changes, you can restore the original symlinks and delete the temporary files by running `scripts/windows/remove-symlinks.sh`. 
-
-It's necessary to remove the temporary files, because otherwise they're displayed as local changes in your git working copy and certain operations are blocked.
+> **Note for Windows users**
+>
+> Setting up the examples involves creating some [symbolic links](https://en.wikipedia.org/wiki/Symbolic_link) (see [here](./tools/examples/README.md#symlinked-node_modules) for details). On Windows, this requires to either have [Developer Mode enabled](https://blogs.windows.com/windowsdeveloper/2016/12/02/symlinks-windows-10) (supported on Windows 10 or newer) or run the setup commands as administrator.
+>
+> The affected commands are:
+> - `yarn setup` / `yarn setup-*`
+> - `yarn build` / `yarn build-*`
+> - `yarn boilerplate:add`
+> - `yarn example-e2e --setup`
 
 ## Using ServiceWorker locally
 
-Since abb36e3cb, running `yarn start --prod` will no longer set up the ServiceWorker, which
-would require manually running `yarn sw-manifest` and `yarn sw-copy` (something that is not possible
-with webpack serving the files from memory).
-
-If you want to test ServiceWorker locally, you can use `yarn build` and serve the files in `dist/`
-with `yarn http-server dist -p 4200`.
-
-For more details see #16745.
+Running `yarn start` (even when explicitly targeting production mode) does not set up the
+ServiceWorker. If you want to test the ServiceWorker locally, you can use `yarn build` and then
+serve the files in `dist/` with `yarn http-server dist -p 4200`.
 
 
 ## Guide to authoring
@@ -106,7 +105,7 @@ You also want to see those changes displayed properly in the doc viewer
 with a quick, edit/view cycle time.
 
 For this purpose, use the `yarn docs-watch` task, which watches for changes to source files and only
-re-processes the the files necessary to generate the docs that are related to the file that has changed.
+re-processes the files necessary to generate the docs that are related to the file that has changed.
 Since this task takes shortcuts, it is much faster (often less than 1 second) but it won't produce full
 fidelity content. For example, links to other docs and code examples may not render correctly. This is
 most particularly noticed in links to other docs and in the embedded examples, which may not always render

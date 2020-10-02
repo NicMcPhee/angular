@@ -1,17 +1,16 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.JsonpCallbackContext
+ * Copyright Google LLC All Rights Reserved.sonpCallbackContext
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {JSONP_ERR_NO_CALLBACK, JSONP_ERR_WRONG_METHOD, JSONP_ERR_WRONG_RESPONSE_TYPE, JsonpClientBackend} from '@angular/common/http/src/jsonp';
+import {HttpRequest} from '@angular/common/http/src/request';
+import {HttpErrorResponse, HttpEventType} from '@angular/common/http/src/response';
 import {ddescribe, describe, it} from '@angular/core/testing/src/testing_internal';
 import {toArray} from 'rxjs/operators';
-
-import {JSONP_ERR_NO_CALLBACK, JSONP_ERR_WRONG_METHOD, JSONP_ERR_WRONG_RESPONSE_TYPE, JsonpClientBackend} from '../src/jsonp';
-import {HttpRequest} from '../src/request';
-import {HttpErrorResponse, HttpEventType} from '../src/response';
 
 import {MockDocument} from './jsonp_mock';
 

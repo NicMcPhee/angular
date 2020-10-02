@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -71,7 +71,7 @@ export class AotSummaryResolver implements SummaryResolver<StaticSymbol> {
     let summary = this.summaryCache.get(rootSymbol);
     if (!summary) {
       this._loadSummaryFile(staticSymbol.filePath);
-      summary = this.summaryCache.get(staticSymbol) !;
+      summary = this.summaryCache.get(staticSymbol)!;
     }
     return (rootSymbol === staticSymbol && summary) || null;
   }
@@ -85,7 +85,7 @@ export class AotSummaryResolver implements SummaryResolver<StaticSymbol> {
 
   getImportAs(staticSymbol: StaticSymbol): StaticSymbol {
     staticSymbol.assertNoMembers();
-    return this.importAs.get(staticSymbol) !;
+    return this.importAs.get(staticSymbol)!;
   }
 
   /**
@@ -95,7 +95,9 @@ export class AotSummaryResolver implements SummaryResolver<StaticSymbol> {
     return this.knownFileNameToModuleNames.get(importedFilePath) || null;
   }
 
-  addSummary(summary: Summary<StaticSymbol>) { this.summaryCache.set(summary.symbol, summary); }
+  addSummary(summary: Summary<StaticSymbol>) {
+    this.summaryCache.set(summary.symbol, summary);
+  }
 
   private _loadSummaryFile(filePath: string): boolean {
     let hasSummary = this.loadedFilePaths.get(filePath);
@@ -120,18 +122,10 @@ export class AotSummaryResolver implements SummaryResolver<StaticSymbol> {
       summaries.forEach((summary) => this.summaryCache.set(summary.symbol, summary));
       if (moduleName) {
         this.knownFileNameToModuleNames.set(filePath, moduleName);
-        if (filePath.endsWith('.d.ts')) {
-          // Also add entries to map the ngfactory & ngsummary files to their module names.
-          // This is necessary to resolve ngfactory & ngsummary files to their AMD module
-          // names when building angular with Bazel from source downstream.
-          // See https://github.com/bazelbuild/rules_typescript/pull/223 for context.
-          this.knownFileNameToModuleNames.set(
-              filePath.replace(/\.d\.ts$/, '.ngfactory.d.ts'), moduleName + '.ngfactory');
-          this.knownFileNameToModuleNames.set(
-              filePath.replace(/\.d\.ts$/, '.ngsummary.d.ts'), moduleName + '.ngsummary');
-        }
       }
-      importAs.forEach((importAs) => { this.importAs.set(importAs.symbol, importAs.importAs); });
+      importAs.forEach((importAs) => {
+        this.importAs.set(importAs.symbol, importAs.importAs);
+      });
     }
     return hasSummary;
   }

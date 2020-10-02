@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {assertFileEqual, unlinkRecursively} from './helpers';
 
-const BINARY = 'ts-api-guardian/bin/ts-api-guardian';
+const BINARY_PATH = require.resolve('../ts-api-guardian/bin/ts-api-guardian');
 
 describe('cli: e2e test', () => {
   const outDir = path.join(process.env['TEST_TMPDIR'], 'tmp');
@@ -23,7 +23,9 @@ describe('cli: e2e test', () => {
     }
   });
 
-  afterEach(() => { unlinkRecursively(outDir); });
+  afterEach(() => {
+    unlinkRecursively(outDir);
+  });
 
   it('should print usage without any argument', () => {
     const {stderr} = execute([]);
@@ -78,7 +80,7 @@ describe('cli: e2e test', () => {
   });
 
   it('should generate respecting --stripExportPattern', () => {
-    const {stdout, status} = execute([
+    const {status} = execute([
       '--out', path.join(outDir, 'underscored.d.ts'), '--stripExportPattern', '^__.*',
       'test/fixtures/underscored.d.ts'
     ]);
@@ -88,7 +90,7 @@ describe('cli: e2e test', () => {
   });
 
   it('should not throw for aliased stripped exports', () => {
-    const {stdout, status} = execute([
+    const {status} = execute([
       '--out', path.join(outDir, 'stripped_alias.d.ts'), '--stripExportPattern', '^__.*',
       'test/fixtures/stripped_alias.d.ts'
     ]);
@@ -121,9 +123,17 @@ function copyFile(sourceFile: string, targetFile: string) {
 }
 
 function execute(args: string[]): {stdout: string, stderr: string, status: number} {
-  const output = child_process.spawnSync(process.execPath, [path.resolve(BINARY), ...args], {
+  // We need to determine the directory that includes the `ts-api-guardian` npm_package that
+  // will be used to spawn the CLI binary. This is a workaround because technically we shouldn't
+  // spawn a child process that doesn't have the custom NodeJS module resolution for Bazel.
+  const nodePath = [
+    path.join(require.resolve('npm/node_modules/chalk/package.json'), '../../'),
+    path.join(require.resolve('../lib/cli.js'), '../../'),
+  ].join(process.platform === 'win32' ? ';' : ':');
+
+  const output = child_process.spawnSync(process.execPath, [BINARY_PATH, ...args], {
     env: {
-      'NODE_PATH': process.cwd(),
+      'NODE_PATH': nodePath,
     }
   });
   chai.assert(!output.error, 'Child process failed or timed out: ' + output.error);

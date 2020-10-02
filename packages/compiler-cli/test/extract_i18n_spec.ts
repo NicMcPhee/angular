@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -8,17 +8,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as ts from 'typescript';
 
 import {mainXi18n} from '../src/extract_i18n';
-
-import {isInBazel, makeTempDir, setup} from './test_support';
-
-function getNgRootDir() {
-  const moduleFilename = module.filename.replace(/\\/g, '/');
-  const distIndex = moduleFilename.indexOf('/dist/all');
-  return moduleFilename.substr(0, distIndex);
-}
+import {setup} from './test_support';
 
 const EXPECTED_XMB = `<?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE messagebundle [
@@ -50,7 +42,7 @@ const EXPECTED_XMB = `<?xml version="1.0" encoding="UTF-8" ?>
   <msg id="5811701742971715242" desc="with ICU and other things"><source>src/icu.html:4,6</source>
      foo <ph name="ICU"><ex>{ count, plural, =1 {...} other {...}}</ex>{ count, plural, =1 {...} other {...}}</ph>
     </msg>
-  <msg id="7254052530614200029" desc="with placeholders"><source>src/placeholders.html:1</source>Name: <ph name="START_BOLD_TEXT"><ex>&lt;b&gt;</ex>&lt;b&gt;</ph><ph name="NAME"><ex>{{
+  <msg id="7254052530614200029" desc="with placeholders"><source>src/placeholders.html:1,3</source>Name: <ph name="START_BOLD_TEXT"><ex>&lt;b&gt;</ex>&lt;b&gt;</ph><ph name="NAME"><ex>{{
       name // i18n(ph=&quot;name&quot;)
     }}</ex>{{
       name // i18n(ph=&quot;name&quot;)
@@ -190,7 +182,7 @@ const EXPECTED_XLIFF2 = `<?xml version="1.0" encoding="UTF-8" ?>
     <unit id="7254052530614200029">
       <notes>
         <note category="description">with placeholders</note>
-        <note category="location">src/placeholders.html:1</note>
+        <note category="location">src/placeholders.html:1,3</note>
       </notes>
       <segment>
         <source>Name: <pc id="0" equivStart="START_BOLD_TEXT" equivEnd="CLOSE_BOLD_TEXT" type="fmt" dispStart="&lt;b&gt;" dispEnd="&lt;/b&gt;"><ph id="1" equiv="NAME" disp="{{
@@ -214,31 +206,12 @@ describe('extract_i18n command line', () => {
 
   beforeEach(() => {
     errorSpy = jasmine.createSpy('consoleError').and.callFake(console.error);
-    if (isInBazel()) {
-      const support = setup();
-      write = (fileName: string, content: string) => { support.write(fileName, content); };
-      basePath = support.basePath;
-      outDir = path.join(basePath, 'built');
-    } else {
-      basePath = makeTempDir();
-      write = (fileName: string, content: string) => {
-        const dir = path.dirname(fileName);
-        if (dir !== '.') {
-          const newDir = path.join(basePath, dir);
-          if (!fs.existsSync(newDir)) fs.mkdirSync(newDir);
-        }
-        fs.writeFileSync(path.join(basePath, fileName), content, {encoding: 'utf-8'});
-      };
-      outDir = path.resolve(basePath, 'built');
-      const ngRootDir = getNgRootDir();
-      const nodeModulesPath = path.resolve(basePath, 'node_modules');
-      fs.mkdirSync(nodeModulesPath);
-      fs.symlinkSync(
-          path.resolve(ngRootDir, 'dist', 'all', '@angular'),
-          path.resolve(nodeModulesPath, '@angular'));
-      fs.symlinkSync(
-          path.resolve(ngRootDir, 'node_modules', 'rxjs'), path.resolve(nodeModulesPath, 'rxjs'));
-    }
+    const support = setup();
+    write = (fileName: string, content: string) => {
+      support.write(fileName, content);
+    };
+    basePath = support.basePath;
+    outDir = path.join(basePath, 'built');
     write('tsconfig-base.json', `{
       "compilerOptions": {
         "experimentalDecorators": true,
@@ -254,6 +227,9 @@ describe('extract_i18n command line', () => {
         "moduleResolution": "node",
         "lib": ["es6", "dom"],
         "typeRoots": ["node_modules/@types"]
+      },
+      "angularCompilerOptions": {
+        "enableIvy": false
       }
     }`);
   });

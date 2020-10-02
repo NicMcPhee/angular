@@ -1,13 +1,13 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {isDevMode} from '../is_dev_mode';
-import {InertBodyHelper} from './inert_body';
+import {isDevMode} from '../util/is_dev_mode';
+import {getInertBodyHelper, InertBodyHelper} from './inert_body';
 import {_sanitizeUrl, sanitizeSrcset} from './url_sanitizer';
 
 function tagSet(tags: string): {[k: string]: boolean} {
@@ -57,14 +57,14 @@ const INLINE_ELEMENTS = merge(
         'bdi,bdo,big,br,cite,code,del,dfn,em,font,i,img,ins,kbd,label,map,mark,picture,q,ruby,rp,rt,s,' +
         'samp,small,source,span,strike,strong,sub,sup,time,track,tt,u,var,video'));
 
-const VALID_ELEMENTS =
+export const VALID_ELEMENTS =
     merge(VOID_ELEMENTS, BLOCK_ELEMENTS, INLINE_ELEMENTS, OPTIONAL_END_TAG_ELEMENTS);
 
 // Attributes that have href and hence need to be sanitized
-const URI_ATTRS = tagSet('background,cite,href,itemtype,longdesc,poster,src,xlink:href');
+export const URI_ATTRS = tagSet('background,cite,href,itemtype,longdesc,poster,src,xlink:href');
 
 // Attributes that have special href set hence need to be sanitized
-const SRCSET_ATTRS = tagSet('srcset');
+export const SRCSET_ATTRS = tagSet('srcset');
 
 const HTML_ATTRS = tagSet(
     'abbr,accesskey,align,alt,autoplay,axis,bgcolor,border,cellpadding,cellspacing,class,clear,color,cols,colspan,' +
@@ -72,6 +72,16 @@ const HTML_ATTRS = tagSet(
     'ismap,itemscope,itemprop,kind,label,lang,language,loop,media,muted,nohref,nowrap,open,preload,rel,rev,role,rows,rowspan,rules,' +
     'scope,scrolling,shape,size,sizes,span,srclang,start,summary,tabindex,target,title,translate,type,usemap,' +
     'valign,value,vspace,width');
+
+// Accessibility attributes as per WAI-ARIA 1.1 (W3C Working Draft 14 December 2018)
+const ARIA_ATTRS = tagSet(
+    'aria-activedescendant,aria-atomic,aria-autocomplete,aria-busy,aria-checked,aria-colcount,aria-colindex,' +
+    'aria-colspan,aria-controls,aria-current,aria-describedby,aria-details,aria-disabled,aria-dropeffect,' +
+    'aria-errormessage,aria-expanded,aria-flowto,aria-grabbed,aria-haspopup,aria-hidden,aria-invalid,' +
+    'aria-keyshortcuts,aria-label,aria-labelledby,aria-level,aria-live,aria-modal,aria-multiline,' +
+    'aria-multiselectable,aria-orientation,aria-owns,aria-placeholder,aria-posinset,aria-pressed,aria-readonly,' +
+    'aria-relevant,aria-required,aria-roledescription,aria-rowcount,aria-rowindex,aria-rowspan,aria-selected,' +
+    'aria-setsize,aria-sort,aria-valuemax,aria-valuemin,aria-valuenow,aria-valuetext');
 
 // NB: This currently consciously doesn't support SVG. SVG sanitization has had several security
 // issues in the past, so it seems safer to leave it out if possible. If support for binding SVG via
@@ -81,7 +91,14 @@ const HTML_ATTRS = tagSet(
 // can be sanitized, but they increase security surface area without a legitimate use case, so they
 // are left out here.
 
-const VALID_ATTRS = merge(URI_ATTRS, SRCSET_ATTRS, HTML_ATTRS);
+export const VALID_ATTRS = merge(URI_ATTRS, SRCSET_ATTRS, HTML_ATTRS, ARIA_ATTRS);
+
+// Elements whose content should not be traversed/preserved, if the elements themselves are invalid.
+//
+// Typically, `<invalid>Some content</invalid>` would traverse (and in this case preserve)
+// `Some content`, but strip `invalid-element` opening/closing tags. For some elements, though, we
+// don't want to preserve the content, if the elements themselves are going to be removed.
+const SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS = tagSet('script,style,template');
 
 /**
  * SanitizingHtmlSerializer serializes a DOM fragment, stripping out any unsafe elements and unsafe
@@ -97,18 +114,19 @@ class SanitizingHtmlSerializer {
     // This cannot use a TreeWalker, as it has to run on Angular's various DOM adapters.
     // However this code never accesses properties off of `document` before deleting its contents
     // again, so it shouldn't be vulnerable to DOM clobbering.
-    let current: Node = el.firstChild !;
+    let current: Node = el.firstChild!;
+    let traverseContent = true;
     while (current) {
       if (current.nodeType === Node.ELEMENT_NODE) {
-        this.startElement(current as Element);
+        traverseContent = this.startElement(current as Element);
       } else if (current.nodeType === Node.TEXT_NODE) {
-        this.chars(current.nodeValue !);
+        this.chars(current.nodeValue!);
       } else {
         // Strip non-element, non-text nodes.
         this.sanitizedSomething = true;
       }
-      if (current.firstChild) {
-        current = current.firstChild !;
+      if (traverseContent && current.firstChild) {
+        current = current.firstChild!;
         continue;
       }
       while (current) {
@@ -117,43 +135,52 @@ class SanitizingHtmlSerializer {
           this.endElement(current as Element);
         }
 
-        let next = this.checkClobberedElement(current, current.nextSibling !);
+        let next = this.checkClobberedElement(current, current.nextSibling!);
 
         if (next) {
           current = next;
           break;
         }
 
-        current = this.checkClobberedElement(current, current.parentNode !);
+        current = this.checkClobberedElement(current, current.parentNode!);
       }
     }
     return this.buf.join('');
   }
 
-  private startElement(element: Element) {
+  /**
+   * Sanitizes an opening element tag (if valid) and returns whether the element's contents should
+   * be traversed. Element content must always be traversed (even if the element itself is not
+   * valid/safe), unless the element is one of `SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS`.
+   *
+   * @param element The element to sanitize.
+   * @return True if the element's contents should be traversed.
+   */
+  private startElement(element: Element): boolean {
     const tagName = element.nodeName.toLowerCase();
     if (!VALID_ELEMENTS.hasOwnProperty(tagName)) {
       this.sanitizedSomething = true;
-      return;
+      return !SKIP_TRAVERSING_CONTENT_IF_INVALID_ELEMENTS.hasOwnProperty(tagName);
     }
     this.buf.push('<');
     this.buf.push(tagName);
     const elAttrs = element.attributes;
     for (let i = 0; i < elAttrs.length; i++) {
       const elAttr = elAttrs.item(i);
-      const attrName = elAttr !.name;
+      const attrName = elAttr!.name;
       const lower = attrName.toLowerCase();
       if (!VALID_ATTRS.hasOwnProperty(lower)) {
         this.sanitizedSomething = true;
         continue;
       }
-      let value = elAttr !.value;
+      let value = elAttr!.value;
       // TODO(martinprobst): Special case image URIs for data:image/...
       if (URI_ATTRS[lower]) value = _sanitizeUrl(value);
       if (SRCSET_ATTRS[lower]) value = sanitizeSrcset(value);
       this.buf.push(' ', attrName, '="', encodeEntities(value), '"');
     }
     this.buf.push('>');
+    return true;
   }
 
   private endElement(current: Element) {
@@ -165,14 +192,16 @@ class SanitizingHtmlSerializer {
     }
   }
 
-  private chars(chars: string) { this.buf.push(encodeEntities(chars)); }
+  private chars(chars: string) {
+    this.buf.push(encodeEntities(chars));
+  }
 
   checkClobberedElement(node: Node, nextNode: Node): Node {
     if (nextNode &&
         (node.compareDocumentPosition(nextNode) &
          Node.DOCUMENT_POSITION_CONTAINED_BY) === Node.DOCUMENT_POSITION_CONTAINED_BY) {
-      throw new Error(
-          `Failed to sanitize html because the element is clobbered: ${(node as Element).outerHTML}`);
+      throw new Error(`Failed to sanitize html because the element is clobbered: ${
+          (node as Element).outerHTML}`);
     }
     return nextNode;
   }
@@ -200,7 +229,9 @@ function encodeEntities(value: string) {
           })
       .replace(
           NON_ALPHANUMERIC_REGEXP,
-          function(match: string) { return '&#' + match.charCodeAt(0) + ';'; })
+          function(match: string) {
+            return '&#' + match.charCodeAt(0) + ';';
+          })
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 }
@@ -214,7 +245,7 @@ let inertBodyHelper: InertBodyHelper;
 export function _sanitizeHtml(defaultDoc: any, unsafeHtmlInput: string): string {
   let inertBodyElement: HTMLElement|null = null;
   try {
-    inertBodyHelper = inertBodyHelper || new InertBodyHelper(defaultDoc);
+    inertBodyHelper = inertBodyHelper || getInertBodyHelper(defaultDoc);
     // Make sure unsafeHtml is actually a string (TypeScript types are not enforced at runtime).
     let unsafeHtml = unsafeHtmlInput ? String(unsafeHtmlInput) : '';
     inertBodyElement = inertBodyHelper.getInertBodyElement(unsafeHtml);
@@ -231,16 +262,16 @@ export function _sanitizeHtml(defaultDoc: any, unsafeHtmlInput: string): string 
       mXSSAttempts--;
 
       unsafeHtml = parsedHtml;
-      parsedHtml = inertBodyElement !.innerHTML;
+      parsedHtml = inertBodyElement!.innerHTML;
       inertBodyElement = inertBodyHelper.getInertBodyElement(unsafeHtml);
     } while (unsafeHtml !== parsedHtml);
 
     const sanitizer = new SanitizingHtmlSerializer();
     const safeHtml = sanitizer.sanitizeChildren(
-        getTemplateContent(inertBodyElement !) as Element || inertBodyElement);
+        getTemplateContent(inertBodyElement!) as Element || inertBodyElement);
     if (isDevMode() && sanitizer.sanitizedSomething) {
       console.warn(
-          'WARNING: sanitizing HTML stripped some content (see http://g.co/ng/security#xss).');
+          'WARNING: sanitizing HTML stripped some content, see http://g.co/ng/security#xss');
     }
 
     return safeHtml;
@@ -255,7 +286,7 @@ export function _sanitizeHtml(defaultDoc: any, unsafeHtmlInput: string): string 
   }
 }
 
-function getTemplateContent(el: Node): Node|null {
+export function getTemplateContent(el: Node): Node|null {
   return 'content' in (el as any /** Microsoft/TypeScript#21517 */) && isTemplateElement(el) ?
       el.content :
       null;

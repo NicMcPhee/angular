@@ -1,15 +1,16 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {isDevMode, ɵlooseIdentical as looseIdentical} from '@angular/core';
+import {isDevMode} from '@angular/core';
 
 import {FormArray, FormControl, FormGroup} from '../model';
-import {Validators} from '../validators';
+import {normalizeValidators, Validators} from '../validators';
+
 import {AbstractControlDirective} from './abstract_control_directive';
 import {AbstractFormGroupDirective} from './abstract_form_group_directive';
 import {CheckboxControlValueAccessor} from './checkbox_value_accessor';
@@ -17,7 +18,6 @@ import {ControlContainer} from './control_container';
 import {ControlValueAccessor} from './control_value_accessor';
 import {DefaultValueAccessor} from './default_value_accessor';
 import {NgControl} from './ng_control';
-import {normalizeAsyncValidator, normalizeValidator} from './normalize_validator';
 import {NumberValueAccessor} from './number_value_accessor';
 import {RadioControlValueAccessor} from './radio_control_value_accessor';
 import {RangeValueAccessor} from './range_value_accessor';
@@ -28,43 +28,52 @@ import {SelectMultipleControlValueAccessor} from './select_multiple_control_valu
 import {AsyncValidator, AsyncValidatorFn, Validator, ValidatorFn} from './validators';
 
 
-export function controlPath(name: string, parent: ControlContainer): string[] {
-  return [...parent.path !, name];
+export function controlPath(name: string|null, parent: ControlContainer): string[] {
+  return [...parent.path!, name!];
 }
 
 export function setUpControl(control: FormControl, dir: NgControl): void {
-  if (!control) _throwError(dir, 'Cannot find control with');
-  if (!dir.valueAccessor) _throwError(dir, 'No value accessor for form control with');
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    if (!control) _throwError(dir, 'Cannot find control with');
+    if (!dir.valueAccessor) _throwError(dir, 'No value accessor for form control with');
+  }
 
-  control.validator = Validators.compose([control.validator !, dir.validator]);
-  control.asyncValidator = Validators.composeAsync([control.asyncValidator !, dir.asyncValidator]);
-  dir.valueAccessor !.writeValue(control.value);
+  control.validator = Validators.compose([control.validator!, dir.validator]);
+  control.asyncValidator = Validators.composeAsync([control.asyncValidator!, dir.asyncValidator]);
+  dir.valueAccessor!.writeValue(control.value);
 
   setUpViewChangePipeline(control, dir);
   setUpModelChangePipeline(control, dir);
 
   setUpBlurPipeline(control, dir);
 
-  if (dir.valueAccessor !.setDisabledState) {
-    control.registerOnDisabledChange(
-        (isDisabled: boolean) => { dir.valueAccessor !.setDisabledState !(isDisabled); });
+  if (dir.valueAccessor!.setDisabledState) {
+    control.registerOnDisabledChange((isDisabled: boolean) => {
+      dir.valueAccessor!.setDisabledState!(isDisabled);
+    });
   }
 
   // re-run validation when validator binding changes, e.g. minlength=3 -> minlength=4
-  dir._rawValidators.forEach((validator: Validator | ValidatorFn) => {
+  dir._rawValidators.forEach((validator: Validator|ValidatorFn) => {
     if ((<Validator>validator).registerOnValidatorChange)
-      (<Validator>validator).registerOnValidatorChange !(() => control.updateValueAndValidity());
+      (<Validator>validator).registerOnValidatorChange!(() => control.updateValueAndValidity());
   });
 
-  dir._rawAsyncValidators.forEach((validator: AsyncValidator | AsyncValidatorFn) => {
+  dir._rawAsyncValidators.forEach((validator: AsyncValidator|AsyncValidatorFn) => {
     if ((<Validator>validator).registerOnValidatorChange)
-      (<Validator>validator).registerOnValidatorChange !(() => control.updateValueAndValidity());
+      (<Validator>validator).registerOnValidatorChange!(() => control.updateValueAndValidity());
   });
 }
 
 export function cleanUpControl(control: FormControl, dir: NgControl) {
-  dir.valueAccessor !.registerOnChange(() => _noControlError(dir));
-  dir.valueAccessor !.registerOnTouched(() => _noControlError(dir));
+  const noop = () => {
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      _noControlError(dir);
+    }
+  };
+
+  dir.valueAccessor!.registerOnChange(noop);
+  dir.valueAccessor!.registerOnTouched(noop);
 
   dir._rawValidators.forEach((validator: any) => {
     if (validator.registerOnValidatorChange) {
@@ -82,7 +91,7 @@ export function cleanUpControl(control: FormControl, dir: NgControl) {
 }
 
 function setUpViewChangePipeline(control: FormControl, dir: NgControl): void {
-  dir.valueAccessor !.registerOnChange((newValue: any) => {
+  dir.valueAccessor!.registerOnChange((newValue: any) => {
     control._pendingValue = newValue;
     control._pendingChange = true;
     control._pendingDirty = true;
@@ -92,7 +101,7 @@ function setUpViewChangePipeline(control: FormControl, dir: NgControl): void {
 }
 
 function setUpBlurPipeline(control: FormControl, dir: NgControl): void {
-  dir.valueAccessor !.registerOnTouched(() => {
+  dir.valueAccessor!.registerOnTouched(() => {
     control._pendingTouched = true;
 
     if (control.updateOn === 'blur' && control._pendingChange) updateControl(control, dir);
@@ -110,7 +119,7 @@ function updateControl(control: FormControl, dir: NgControl): void {
 function setUpModelChangePipeline(control: FormControl, dir: NgControl): void {
   control.registerOnChange((newValue: any, emitModelEvent: boolean) => {
     // control -> view
-    dir.valueAccessor !.writeValue(newValue);
+    dir.valueAccessor!.writeValue(newValue);
 
     // control -> ngModel
     if (emitModelEvent) dir.viewToModelUpdate(newValue);
@@ -118,8 +127,9 @@ function setUpModelChangePipeline(control: FormControl, dir: NgControl): void {
 }
 
 export function setUpFormContainer(
-    control: FormGroup | FormArray, dir: AbstractFormGroupDirective | FormArrayName) {
-  if (control == null) _throwError(dir, 'Cannot find control with');
+    control: FormGroup|FormArray, dir: AbstractFormGroupDirective|FormArrayName) {
+  if (control == null && (typeof ngDevMode === 'undefined' || ngDevMode))
+    _throwError(dir, 'Cannot find control with');
   control.validator = Validators.compose([control.validator, dir.validator]);
   control.asyncValidator = Validators.composeAsync([control.asyncValidator, dir.asyncValidator]);
 }
@@ -130,9 +140,9 @@ function _noControlError(dir: NgControl) {
 
 function _throwError(dir: AbstractControlDirective, message: string): void {
   let messageEnd: string;
-  if (dir.path !.length > 1) {
+  if (dir.path!.length > 1) {
     messageEnd = `path: '${dir.path!.join(' -> ')}'`;
-  } else if (dir.path ![0]) {
+  } else if (dir.path![0]) {
     messageEnd = `name: '${dir.path}'`;
   } else {
     messageEnd = 'unspecified name attribute';
@@ -140,14 +150,16 @@ function _throwError(dir: AbstractControlDirective, message: string): void {
   throw new Error(`${message} ${messageEnd}`);
 }
 
-export function composeValidators(validators: Array<Validator|Function>): ValidatorFn|null {
-  return validators != null ? Validators.compose(validators.map(normalizeValidator)) : null;
+export function composeValidators(validators: Array<Validator|ValidatorFn>): ValidatorFn|null {
+  return validators != null ? Validators.compose(normalizeValidators<ValidatorFn>(validators)) :
+                              null;
 }
 
-export function composeAsyncValidators(validators: Array<Validator|Function>): AsyncValidatorFn|
-    null {
-  return validators != null ? Validators.composeAsync(validators.map(normalizeAsyncValidator)) :
-                              null;
+export function composeAsyncValidators(validators: Array<AsyncValidator|AsyncValidatorFn>):
+    AsyncValidatorFn|null {
+  return validators != null ?
+      Validators.composeAsync(normalizeValidators<AsyncValidatorFn>(validators)) :
+      null;
 }
 
 export function isPropertyUpdated(changes: {[key: string]: any}, viewModel: any): boolean {
@@ -155,7 +167,7 @@ export function isPropertyUpdated(changes: {[key: string]: any}, viewModel: any)
   const change = changes['model'];
 
   if (change.isFirstChange()) return true;
-  return !looseIdentical(viewModel, change.currentValue);
+  return !Object.is(viewModel, change.currentValue);
 }
 
 const BUILTIN_ACCESSORS = [
@@ -187,7 +199,7 @@ export function selectValueAccessor(
     dir: NgControl, valueAccessors: ControlValueAccessor[]): ControlValueAccessor|null {
   if (!valueAccessors) return null;
 
-  if (!Array.isArray(valueAccessors))
+  if (!Array.isArray(valueAccessors) && (typeof ngDevMode === 'undefined' || ngDevMode))
     _throwError(dir, 'Value accessor was not provided as an array for form control with');
 
   let defaultAccessor: ControlValueAccessor|undefined = undefined;
@@ -199,12 +211,12 @@ export function selectValueAccessor(
       defaultAccessor = v;
 
     } else if (isBuiltInAccessor(v)) {
-      if (builtinAccessor)
+      if (builtinAccessor && (typeof ngDevMode === 'undefined' || ngDevMode))
         _throwError(dir, 'More than one built-in value accessor matches form control with');
       builtinAccessor = v;
 
     } else {
-      if (customAccessor)
+      if (customAccessor && (typeof ngDevMode === 'undefined' || ngDevMode))
         _throwError(dir, 'More than one custom value accessor matches form control with');
       customAccessor = v;
     }
@@ -214,7 +226,9 @@ export function selectValueAccessor(
   if (builtinAccessor) return builtinAccessor;
   if (defaultAccessor) return defaultAccessor;
 
-  _throwError(dir, 'No valid value accessor for form control with');
+  if (typeof ngDevMode === 'undefined' || ngDevMode) {
+    _throwError(dir, 'No valid value accessor for form control with');
+  }
   return null;
 }
 
@@ -226,12 +240,14 @@ export function removeDir<T>(list: T[], el: T): void {
 // TODO(kara): remove after deprecation period
 export function _ngModelWarning(
     name: string, type: {_ngModelWarningSentOnce: boolean},
-    instance: {_ngModelWarningSent: boolean}, warningConfig: string | null) {
+    instance: {_ngModelWarningSent: boolean}, warningConfig: string|null) {
   if (!isDevMode() || warningConfig === 'never') return;
 
   if (((warningConfig === null || warningConfig === 'once') && !type._ngModelWarningSentOnce) ||
       (warningConfig === 'always' && !instance._ngModelWarningSent)) {
-    ReactiveErrors.ngModelWarning(name);
+    if (typeof ngDevMode === 'undefined' || ngDevMode) {
+      ReactiveErrors.ngModelWarning(name);
+    }
     type._ngModelWarningSentOnce = true;
     instance._ngModelWarningSent = true;
   }

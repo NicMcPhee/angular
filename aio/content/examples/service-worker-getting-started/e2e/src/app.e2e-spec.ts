@@ -11,11 +11,11 @@ describe('sw-example App', () => {
 
   it('should display welcome message', () => {
     page.navigateTo();
-    expect(page.getParagraphText()).toEqual('Welcome to Service Workers!');
+    expect(page.getTitleText()).toEqual('Welcome to Service Workers!');
   });
 
   it('should display the Angular logo', () => {
-    let logo = element(by.css('img'));
+    const logo = element(by.css('img'));
     page.navigateTo();
     expect(logo.isPresent()).toBe(true);
   });
@@ -25,7 +25,7 @@ describe('sw-example App', () => {
     expect(listHeader.getText()).toEqual('Here are some links to help you start:');
   });
 
-  it('should show a list of links', function () {
+  it('should show a list of links', () => {
       element.all(by.css('ul > li > h2 > a')).then((items) => {
         expect(items.length).toBe(4);
         expect(items[0].getText()).toBe('Angular Service Worker Intro');
@@ -34,8 +34,9 @@ describe('sw-example App', () => {
         expect(items[3].getText()).toBe('Angular blog');
       });
   });
-   // Check for a rejected promise as the service worker is not enabled
-   it('SwUpdate.checkForUpdate() should return a rejected promise', () => {
+
+  // Check for a rejected promise as the service worker is not enabled
+  it('SwUpdate.checkForUpdate() should return a rejected promise', () => {
     const button = element(by.css('button'));
     const rejectMessage = element(by.css('p'));
     button.click();

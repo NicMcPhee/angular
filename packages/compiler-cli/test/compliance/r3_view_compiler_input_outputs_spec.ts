@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -16,7 +16,7 @@ describe('compiler compliance: listen()', () => {
     compileAnimations: false,
   });
 
-  it('should create declare inputs/outputs', () => {
+  it('should declare inputs/outputs', () => {
     const files = {
       app: {
         'spec.ts': `
@@ -52,11 +52,11 @@ describe('compiler compliance: listen()', () => {
     };
 
     const componentDef = `
-      MyComponent.ngComponentDef = IDENT.ɵdefineComponent({
+      MyComponent.ɵcmp = IDENT.ɵɵdefineComponent({
           …
           inputs:{
             componentInput: "componentInput",
-            originalComponentInput: "renamedComponentInput"
+            originalComponentInput: ["renamedComponentInput", "originalComponentInput"]
           },
           outputs: {
             componentOutput: "componentOutput",
@@ -66,11 +66,11 @@ describe('compiler compliance: listen()', () => {
         });`;
 
     const directiveDef = `
-      MyDirective.ngDirectiveDef = IDENT.ɵdefineDirective({
+      MyDirective.ɵdir = IDENT.ɵɵdefineDirective({
         …
         inputs:{
           directiveInput: "directiveInput",
-          originalDirectiveInput: "renamedDirectiveInput"
+          originalDirectiveInput: ["renamedDirectiveInput", "originalDirectiveInput"]
         },
         outputs: {
           directiveOutput: "directiveOutput",
@@ -85,5 +85,4 @@ describe('compiler compliance: listen()', () => {
     expectEmit(result.source, componentDef, 'Incorrect component definition');
     expectEmit(result.source, directiveDef, 'Incorrect directive definition');
   });
-
 });

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -15,7 +15,7 @@ import {ActivatedRoute} from './router_state';
 /**
  * Store contextual information about a `RouterOutlet`
  *
- *
+ * @publicApi
  */
 export class OutletContext {
   outlet: RouterOutlet|null = null;
@@ -28,7 +28,7 @@ export class OutletContext {
 /**
  * Store contextual information about the children (= nested) `RouterOutlet`
  *
- *
+ * @publicApi
  */
 export class ChildrenOutletContexts {
   // contexts for child outlets, by name.
@@ -63,7 +63,9 @@ export class ChildrenOutletContexts {
     return contexts;
   }
 
-  onOutletReAttached(contexts: Map<string, OutletContext>) { this.contexts = contexts; }
+  onOutletReAttached(contexts: Map<string, OutletContext>) {
+    this.contexts = contexts;
+  }
 
   getOrCreateContext(childName: string): OutletContext {
     let context = this.getContext(childName);
@@ -76,5 +78,7 @@ export class ChildrenOutletContexts {
     return context;
   }
 
-  getContext(childName: string): OutletContext|null { return this.contexts.get(childName) || null; }
+  getContext(childName: string): OutletContext|null {
+    return this.contexts.get(childName) || null;
+  }
 }

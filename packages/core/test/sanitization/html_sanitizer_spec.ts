@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -9,11 +9,12 @@
 import {browserDetection} from '@angular/platform-browser/testing/src/browser_util';
 
 import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
+import {isDOMParserAvailable} from '../../src/sanitization/inert_body';
 
 {
   describe('HTML sanitizer', () => {
     let defaultDoc: any;
-    let originalLog: (msg: any) => any = null !;
+    let originalLog: (msg: any) => any = null!;
     let logMsgs: string[];
 
     beforeEach(() => {
@@ -23,7 +24,9 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
       console.warn = (msg: any) => logMsgs.push(msg);
     });
 
-    afterEach(() => { console.warn = originalLog; });
+    afterEach(() => {
+      console.warn = originalLog;
+    });
 
     it('serializes nested structures', () => {
       expect(_sanitizeHtml(defaultDoc, '<div alt="x"><p>a</p>b<b>c<a alt="more">d</a></b>e</div>'))
@@ -36,8 +39,9 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
           .toEqual('<p>Hello <br> World</p>');
     });
 
-    it('supports namespaced elements',
-       () => { expect(_sanitizeHtml(defaultDoc, 'a<my:hr/><my:div>b</my:div>c')).toEqual('abc'); });
+    it('supports namespaced elements', () => {
+      expect(_sanitizeHtml(defaultDoc, 'a<my:hr/><my:div>b</my:div>c')).toEqual('abc');
+    });
 
     it('supports namespaced attributes', () => {
       expect(_sanitizeHtml(defaultDoc, '<a xlink:href="something">t</a>'))
@@ -52,13 +56,23 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
           .toEqual('<main><summary>Works</summary></main>');
     });
 
+    it('supports ARIA attributes', () => {
+      expect(_sanitizeHtml(defaultDoc, '<h1 role="presentation" aria-haspopup="true">Test</h1>'))
+          .toEqual('<h1 role="presentation" aria-haspopup="true">Test</h1>');
+      expect(_sanitizeHtml(defaultDoc, '<i aria-label="Info">Info</i>'))
+          .toEqual('<i aria-label="Info">Info</i>');
+      expect(_sanitizeHtml(defaultDoc, '<img src="pteranodon.jpg" aria-details="details">'))
+          .toEqual('<img src="pteranodon.jpg" aria-details="details">');
+    });
+
     it('sanitizes srcset attributes', () => {
       expect(_sanitizeHtml(defaultDoc, '<img srcset="/foo.png 400px, javascript:evil() 23px">'))
           .toEqual('<img srcset="/foo.png 400px, unsafe:javascript:evil() 23px">');
     });
 
-    it('supports sanitizing plain text',
-       () => { expect(_sanitizeHtml(defaultDoc, 'Hello, World')).toEqual('Hello, World'); });
+    it('supports sanitizing plain text', () => {
+      expect(_sanitizeHtml(defaultDoc, 'Hello, World')).toEqual('Hello, World');
+    });
 
     it('ignores non-element, non-attribute nodes', () => {
       expect(_sanitizeHtml(defaultDoc, '<!-- comments? -->no.')).toEqual('no.');
@@ -85,18 +99,51 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
           .toEqual('<p alt="% &amp; &#34; !">Hello</p>');  // NB: quote encoded as ASCII &#34;.
     });
 
-    describe('should strip dangerous elements', () => {
+    describe('should strip dangerous elements (but potentially traverse their content)', () => {
       const dangerousTags = [
-        'frameset', 'form', 'param', 'object', 'embed', 'textarea', 'input', 'button', 'option',
-        'select', 'script', 'style', 'link', 'base', 'basefont'
+        'form',
+        'object',
+        'textarea',
+        'button',
+        'option',
+        'select',
       ];
-
       for (const tag of dangerousTags) {
-        it(`${tag}`,
-           () => { expect(_sanitizeHtml(defaultDoc, `<${tag}>evil!</${tag}>`)).toEqual('evil!'); });
+        it(tag, () => {
+          expect(_sanitizeHtml(defaultDoc, `<${tag}>evil!</${tag}>`)).toEqual('evil!');
+        });
       }
 
-      it(`swallows frame entirely`, () => {
+      const dangerousSelfClosingTags = [
+        'base',
+        'basefont',
+        'embed',
+        'frameset',
+        'input',
+        'link',
+        'param',
+      ];
+      for (const tag of dangerousSelfClosingTags) {
+        it(tag, () => {
+          expect(_sanitizeHtml(defaultDoc, `before<${tag}>After`)).toEqual('beforeAfter');
+        });
+      }
+
+      const dangerousSkipContentTags = [
+        'script',
+        'style',
+        'template',
+      ];
+      for (const tag of dangerousSkipContentTags) {
+        it(tag, () => {
+          expect(_sanitizeHtml(defaultDoc, `<${tag}>evil!</${tag}>`)).toEqual('');
+        });
+      }
+
+      it(`frame`, () => {
+        // `<frame>` is special, because different browsers treat it differently (e.g. remove it
+        // altogether). // We just verify that (one way or another), there is no `<frame>` element
+        // after sanitization.
         expect(_sanitizeHtml(defaultDoc, `<frame>evil!</frame>`)).not.toContain('<frame>');
       });
     });
@@ -109,6 +156,42 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
           expect(_sanitizeHtml(defaultDoc, `<a ${attr}="x">evil!</a>`)).toEqual('<a>evil!</a>');
         });
       }
+    });
+
+    it('ignores content of script elements', () => {
+      expect(_sanitizeHtml(defaultDoc, '<script>var foo="<p>bar</p>"</script>')).toEqual('');
+      expect(_sanitizeHtml(defaultDoc, '<script>var foo="<p>bar</p>"</script><div>hi</div>'))
+          .toEqual('<div>hi</div>');
+      expect(_sanitizeHtml(defaultDoc, '<style>\<\!-- something--\>hi</style>')).toEqual('');
+    });
+
+    it('ignores content of style elements', () => {
+      expect(_sanitizeHtml(defaultDoc, '<style><!-- foobar --></style><div>hi</div>'))
+          .toEqual('<div>hi</div>');
+      expect(_sanitizeHtml(defaultDoc, '<style><!-- foobar --></style>')).toEqual('');
+      expect(_sanitizeHtml(defaultDoc, '<style>\<\!-- something--\>hi</style>')).toEqual('');
+      expect(logMsgs.join('\n')).toMatch(/sanitizing HTML stripped some content/);
+    });
+
+    it('should strip unclosed iframe tag', () => {
+      expect(_sanitizeHtml(defaultDoc, '<iframe>')).toEqual('');
+      expect([
+        '&lt;iframe&gt;',
+        // Double-escaped on IE
+        '&amp;lt;iframe&amp;gt;'
+      ]).toContain(_sanitizeHtml(defaultDoc, '<iframe><iframe>'));
+      expect([
+        '&lt;script&gt;evil();&lt;/script&gt;',
+        // Double-escaped on IE
+        '&amp;lt;script&amp;gt;evil();&amp;lt;/script&amp;gt;'
+      ]).toContain(_sanitizeHtml(defaultDoc, '<iframe><script>evil();</script>'));
+    });
+
+    it('should ignore extraneous body tags', () => {
+      expect(_sanitizeHtml(defaultDoc, '</body>')).toEqual('');
+      expect(_sanitizeHtml(defaultDoc, 'foo</body>bar')).toEqual('foobar');
+      expect(_sanitizeHtml(defaultDoc, 'foo<body>bar')).toEqual('foobar');
+      expect(_sanitizeHtml(defaultDoc, 'fo<body>ob</body>ar')).toEqual('foobar');
     });
 
     it('should not enter an infinite loop on clobbered elements', () => {
@@ -154,9 +237,9 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
              .toEqual(
                  isDOMParserAvailable() ?
                      // PlatformBrowser output
-                     '<p>&lt;img src=&#34;<img src="x"></p>' :
+                     '<p><img src="x"></p>' :
                      // PlatformServer output
-                     '<p><img src="&lt;/style&gt;&lt;img src=x onerror=alert(1)//"></p>');
+                     '<p></p>');
        });
 
     if (browserDetection.isWebkit) {
@@ -167,19 +250,4 @@ import {_sanitizeHtml} from '../../src/sanitization/html_sanitizer';
       });
     }
   });
-}
-
-/**
- * We need to determine whether the DOMParser exists in the global context.
- * The try-catch is because, on some browsers, trying to access this property
- * on window can actually throw an error.
- *
- * @suppress {uselessCode}
- */
-function isDOMParserAvailable() {
-  try {
-    return !!(window as any).DOMParser;
-  } catch (e) {
-    return false;
-  }
 }

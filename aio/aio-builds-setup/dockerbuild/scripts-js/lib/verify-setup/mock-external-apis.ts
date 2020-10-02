@@ -2,7 +2,7 @@
 import * as nock from 'nock';
 import * as tar from 'tar-stream';
 import {gzipSync} from 'zlib';
-import {createLogger, getEnvVar} from '../common/utils';
+import {getEnvVar, Logger} from '../common/utils';
 import {BuildNums, PrNums, SHA} from './constants';
 
 // We are using the `nock` library to fake responses from REST requests, when testing.
@@ -14,14 +14,7 @@ import {BuildNums, PrNums, SHA} from './constants';
 // below and return a suitable response. This is quite complicated to setup since the
 // response from, say, CircleCI will affect what request is made to, say, Github.
 
-const logger = createLogger('NOCK');
-
-const log = (...args: any[]) => {
-  // Filter out non-matching URL checks
-  if (!/^matching.+: false$/.test(args[0])) {
-    logger.log(...args);
-  }
-};
+const logger = new Logger('mock-external-apis');
 
 const AIO_CIRCLE_CI_TOKEN = getEnvVar('AIO_CIRCLE_CI_TOKEN');
 const AIO_GITHUB_TOKEN = getEnvVar('AIO_GITHUB_TOKEN');
@@ -76,7 +69,7 @@ const GITHUB_PULLS_URL = `/repos/${AIO_GITHUB_ORGANIZATION}/${AIO_GITHUB_REPO}/p
 const GITHUB_TEAMS_URL = `/orgs/${AIO_GITHUB_ORGANIZATION}/teams`;
 
 const getIssueUrl = (prNum: number) => `${GITHUB_ISSUES_URL}/${prNum}`;
-const getFilesUrl = (prNum: number) => `${GITHUB_PULLS_URL}/${prNum}/files`;
+const getFilesUrl = (prNum: number, pageNum = 1) => `${GITHUB_PULLS_URL}/${prNum}/files?page=${pageNum}&per_page=100`;
 const getCommentUrl = (prNum: number) => `${getIssueUrl(prNum)}/comments`;
 const getTeamMembershipUrl = (teamId: number, username: string) => `/teams/${teamId}/memberships/${username}`;
 
@@ -91,13 +84,13 @@ const createArchive = (buildNum: number, prNum: number, sha: string) => {
 };
 
 // Create request scopes
-const circleCiApi = nock(CIRCLE_CI_API_HOST).log(log).persist();
-const githubApi = nock(GITHUB_API_HOST).log(log).persist().matchHeader('Authorization', `token ${AIO_GITHUB_TOKEN}`);
+const circleCiApi = nock(CIRCLE_CI_API_HOST).persist();
+const githubApi = nock(GITHUB_API_HOST).persist().matchHeader('Authorization', `token ${AIO_GITHUB_TOKEN}`);
 
 //////////////////////////////
 
 // GENERAL responses
-githubApi.get(GITHUB_TEAMS_URL + '?page=0&per_page=100').reply(200, TEST_TEAM_INFO);
+githubApi.get(GITHUB_TEAMS_URL + '?page=1&per_page=100').reply(200, TEST_TEAM_INFO);
 githubApi.post(getCommentUrl(PrNums.TRUST_CHECK_ACTIVE_TRUSTED_USER)).reply(200);
 
 // BUILD_INFO errors

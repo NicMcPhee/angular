@@ -1,15 +1,15 @@
 // Imports
 import {GithubApi} from '../../lib/common/github-api';
-import {GithubPullRequests} from '../../lib/common/github-pull-requests';
+import {GithubPullRequests, PullRequest} from '../../lib/common/github-pull-requests';
 
 // Tests
 describe('GithubPullRequests', () => {
-
   let githubApi: jasmine.SpyObj<GithubApi>;
 
   beforeEach(() => {
     githubApi = jasmine.createSpyObj('githubApi', ['post', 'get', 'getPaginated']);
   });
+
 
   describe('constructor()', () => {
 
@@ -47,27 +47,21 @@ describe('GithubPullRequests', () => {
 
 
     it('should make a POST request to Github with the correct pathname, params and data', () => {
-      githubApi.post.and.callFake(() => Promise.resolve());
+      githubApi.post.and.resolveTo();
       prs.addComment(42, 'body');
       expect(githubApi.post).toHaveBeenCalledWith('/repos/foo/bar/issues/42/comments', null, {body: 'body'});
     });
 
 
-    it('should reject if the request fails', done => {
-      githubApi.post.and.callFake(() => Promise.reject('Test'));
-      prs.addComment(42, 'body').catch(err => {
-        expect(err).toBe('Test');
-        done();
-      });
+    it('should reject if the request fails', async () => {
+      githubApi.post.and.rejectWith('Test');
+      await expectAsync(prs.addComment(42, 'body')).toBeRejectedWith('Test');
     });
 
 
-    it('should resolve with the data from the Github POST', done => {
-      githubApi.post.and.callFake(() => Promise.resolve('Test'));
-      prs.addComment(42, 'body').then(data => {
-        expect(data).toBe('Test');
-        done();
-      });
+    it('should resolve with the data from the Github POST', async () => {
+      githubApi.post.and.resolveTo('Test');
+      await expectAsync(prs.addComment(42, 'body')).toBeResolvedTo('Test');
     });
 
   });
@@ -87,24 +81,20 @@ describe('GithubPullRequests', () => {
     });
 
 
-    it('should resolve with the data returned from GitHub', done => {
+    it('should resolve with the data returned from GitHub', async () => {
       const expected: any = {number: 42};
-      githubApi.get.and.callFake(() => Promise.resolve(expected));
-      prs.fetch(42).then(data => {
-        expect(data).toEqual(expected);
-        done();
-      });
+      githubApi.get.and.resolveTo(expected);
+
+      await expectAsync(prs.fetch(42)).toBeResolvedTo(expected);
     });
+
   });
 
 
   describe('fetchAll()', () => {
     let prs: GithubPullRequests;
 
-    beforeEach(() => {
-      prs = new GithubPullRequests(githubApi, 'foo', 'bar');
-      spyOn(console, 'log');
-    });
+    beforeEach(() => prs = new GithubPullRequests(githubApi, 'foo', 'bar'));
 
 
     it('should call \'getPaginated()\' with the correct pathname and params', () => {
@@ -127,11 +117,18 @@ describe('GithubPullRequests', () => {
     });
 
 
-    it('should forward the value returned by \'getPaginated()\'', () => {
-      githubApi.getPaginated.and.returnValue('Test');
-      expect(prs.fetchAll() as any).toBe('Test');
+    it('should forward the value returned by \'getPaginated()\'', async () => {
+      const mockPrs: PullRequest[] = [
+        {number: 1, user: {login: 'foo'}, labels: []},
+        {number: 2, user: {login: 'bar'}, labels: []},
+      ];
+
+      githubApi.getPaginated.and.resolveTo(mockPrs);
+      expect(await prs.fetchAll()).toBe(mockPrs);
     });
+
   });
+
 
   describe('fetchFiles()', () => {
     let prs: GithubPullRequests;
@@ -141,21 +138,19 @@ describe('GithubPullRequests', () => {
     });
 
 
-    it('should make a GET request to GitHub with the correct pathname', () => {
+    it('should make a paginated GET request to GitHub with the correct pathname', () => {
       prs.fetchFiles(42);
-      expect(githubApi.get).toHaveBeenCalledWith('/repos/foo/bar/pulls/42/files');
+      expect(githubApi.getPaginated).toHaveBeenCalledWith('/repos/foo/bar/pulls/42/files');
     });
 
 
-    it('should resolve with the data returned from GitHub', done => {
-      const expected: any = [{ sha: 'ABCDE', filename: 'a/b/c'}, { sha: '12345', filename: 'x/y/z' }];
-      githubApi.get.and.callFake(() => Promise.resolve(expected));
-      prs.fetch(42).then(data => {
-        expect(data).toEqual(expected);
-        done();
-      });
+    it('should resolve with the data returned from GitHub', async () => {
+      const expected: any = [{sha: 'ABCDE', filename: 'a/b/c'}, {sha: '12345', filename: 'x/y/z'}];
+      githubApi.getPaginated.and.resolveTo(expected);
+
+      await expectAsync(prs.fetchFiles(42)).toBeResolvedTo(expected);
     });
+
   });
-
 
 });

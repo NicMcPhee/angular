@@ -1,18 +1,17 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {HttpRequest} from '@angular/common/http/src/request';
+import {HttpDownloadProgressEvent, HttpErrorResponse, HttpEvent, HttpEventType, HttpHeaderResponse, HttpResponse, HttpResponseBase, HttpUploadProgressEvent} from '@angular/common/http/src/response';
+import {HttpXhrBackend} from '@angular/common/http/src/xhr';
 import {ddescribe, describe, fit, it} from '@angular/core/testing/src/testing_internal';
 import {Observable} from 'rxjs';
 import {toArray} from 'rxjs/operators';
-
-import {HttpRequest} from '../src/request';
-import {HttpDownloadProgressEvent, HttpErrorResponse, HttpEvent, HttpEventType, HttpHeaderResponse, HttpResponse, HttpResponseBase, HttpUploadProgressEvent} from '../src/response';
-import {HttpXhrBackend} from '../src/xhr';
 
 import {MockXhrFactory} from './xhr_mock';
 
@@ -30,8 +29,8 @@ const XSSI_PREFIX = ')]}\'\n';
 
 {
   describe('XhrBackend', () => {
-    let factory: MockXhrFactory = null !;
-    let backend: HttpXhrBackend = null !;
+    let factory: MockXhrFactory = null!;
+    let backend: HttpXhrBackend = null!;
     beforeEach(() => {
       factory = new MockXhrFactory();
       backend = new HttpXhrBackend(factory);
@@ -93,7 +92,7 @@ const XSSI_PREFIX = ')]}\'\n';
       factory.mock.mockFlush(200, 'OK', JSON.stringify({data: 'some data'}));
       expect(events.length).toBe(2);
       const res = events[1] as HttpResponse<{data: string}>;
-      expect(res.body !.data).toBe('some data');
+      expect(res.body!.data).toBe('some data');
     });
     it('handles a blank json response', () => {
       const events = trackEvents(backend.handle(TEST_POST.clone({responseType: 'json'})));
@@ -107,14 +106,14 @@ const XSSI_PREFIX = ')]}\'\n';
       factory.mock.mockFlush(500, 'Error', JSON.stringify({data: 'some data'}));
       expect(events.length).toBe(2);
       const res = events[1] as any as HttpErrorResponse;
-      expect(res.error !.data).toBe('some data');
+      expect(res.error!.data).toBe('some data');
     });
     it('handles a json error response with XSSI prefix', () => {
       const events = trackEvents(backend.handle(TEST_POST.clone({responseType: 'json'})));
       factory.mock.mockFlush(500, 'Error', XSSI_PREFIX + JSON.stringify({data: 'some data'}));
       expect(events.length).toBe(2);
       const res = events[1] as any as HttpErrorResponse;
-      expect(res.error !.data).toBe('some data');
+      expect(res.error!.data).toBe('some data');
     });
     it('handles a json string response', () => {
       const events = trackEvents(backend.handle(TEST_POST.clone({responseType: 'json'})));
@@ -129,7 +128,7 @@ const XSSI_PREFIX = ')]}\'\n';
       factory.mock.mockFlush(200, 'OK', XSSI_PREFIX + JSON.stringify({data: 'some data'}));
       expect(events.length).toBe(2);
       const res = events[1] as HttpResponse<{data: string}>;
-      expect(res.body !.data).toBe('some data');
+      expect(res.body!.data).toBe('some data');
     });
     it('emits unsuccessful responses via the error path', done => {
       backend.handle(TEST_POST).subscribe(undefined, (err: HttpErrorResponse) => {
@@ -142,10 +141,22 @@ const XSSI_PREFIX = ')]}\'\n';
     it('emits real errors via the error path', done => {
       backend.handle(TEST_POST).subscribe(undefined, (err: HttpErrorResponse) => {
         expect(err instanceof HttpErrorResponse).toBe(true);
-        expect(err.error instanceof Error);
+        expect(err.error instanceof Error).toBeTrue();
+        expect(err.url).toBe('/test');
         done();
       });
       factory.mock.mockErrorEvent(new Error('blah'));
+    });
+    it('avoids abort a request when fetch operation is completed', done => {
+      const abort = jasmine.createSpy('abort');
+
+      backend.handle(TEST_POST).toPromise().then(() => {
+        expect(abort).not.toHaveBeenCalled();
+        done();
+      });
+
+      factory.mock.abort = abort;
+      factory.mock.mockFlush(200, 'OK', 'Done');
     });
     describe('progress events', () => {
       it('are emitted for download progress', done => {

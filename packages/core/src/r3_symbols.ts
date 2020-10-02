@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -14,16 +14,23 @@
  * compiler writes imports to this file.
  *
  * Only a subset of such imports are supported - core is not allowed to declare components or pipes.
- * A check in ngtsc's translator.ts validates this condition.
+ * A check in ngtsc's `R3SymbolsImportRewriter` validates this condition. The rewriter is only used
+ * when compiling @angular/core and is responsible for translating an external name (prefixed with
+ * ɵ) to the internal symbol name as exported below.
  *
  * The below symbols are used for @Injectable and @NgModule compilation.
  */
 
-export {InjectableDef as ɵInjectableDef, InjectorDef as ɵInjectorDef, defineInjectable, defineInjector} from './di/defs';
-export {inject} from './di/injector';
-export {NgModuleDef as ɵNgModuleDef} from './metadata/ng_module';
-export {defineNgModule as ɵdefineNgModule} from './render3/definition';
-export {NgModuleFactory as ɵNgModuleFactory} from './render3/ng_module_ref';
+export {ɵɵinject} from './di/injector_compatibility';
+export {ɵɵdefineInjectable, ɵɵdefineInjector, ɵɵInjectableDef, ɵɵInjectorDef} from './di/interface/defs';
+export {NgModuleDef, ɵɵNgModuleDefWithMeta} from './metadata/ng_module';
+export {ɵɵdefineNgModule} from './render3/definition';
+export {ɵɵFactoryDef} from './render3/interfaces/definition';
+export {setClassMetadata} from './render3/metadata';
+export {NgModuleFactory} from './render3/ng_module_ref';
+export {noSideEffects as ɵnoSideEffects} from './util/closure';
+
+
 
 /**
  * The existence of this constant (in this particular file) informs the Angular compiler that the

@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
@@ -65,6 +65,10 @@ import {invalidPipeArgumentError} from './invalid_pipe_argument_error';
  *  |                    | yy          | Numeric: 2 digits + zero padded                               | 02, 20, 01, 17, 73                                         |
  *  |                    | yyy         | Numeric: 3 digits + zero padded                               | 002, 020, 201, 2017, 20173                                 |
  *  |                    | yyyy        | Numeric: 4 digits or more + zero padded                       | 0002, 0020, 0201, 2017, 20173                              |
+ *  | Week-numbering year| r           | Numeric: minimum digits                                       | 2, 20, 201, 2017, 20173                                    |
+ *  |                    | rr          | Numeric: 2 digits + zero padded                               | 02, 20, 01, 17, 73                                         |
+ *  |                    | rrr         | Numeric: 3 digits + zero padded                               | 002, 020, 201, 2017, 20173                                 |
+ *  |                    | rrrr        | Numeric: 4 digits or more + zero padded                       | 0002, 0020, 0201, 2017, 20173                              |
  *  | Month              | M           | Numeric: 1 digit                                              | 9, 12                                                      |
  *  |                    | MM          | Numeric: 2 digits + zero padded                               | 09, 12                                                     |
  *  |                    | MMM         | Abbreviated                                                   | Sep                                                        |
@@ -125,7 +129,7 @@ import {invalidPipeArgumentError} from './invalid_pipe_argument_error';
  * {{ dateObj | date }}               // output is 'Jun 15, 2015'
  * {{ dateObj | date:'medium' }}      // output is 'Jun 15, 2015, 9:43:11 PM'
  * {{ dateObj | date:'shortTime' }}   // output is '9:43 PM'
- * {{ dateObj | date:'mmss' }}        // output is '43:11'
+ * {{ dateObj | date:'mm:ss' }}       // output is '43:11'
  * ```
  *
  * ### Usage example
@@ -147,6 +151,7 @@ import {invalidPipeArgumentError} from './invalid_pipe_argument_error';
  * }
  * ```
  *
+ * @publicApi
  */
 // clang-format on
 @Pipe({name: 'date', pure: true})
@@ -159,14 +164,22 @@ export class DatePipe implements PipeTransform {
    * @param format The date/time components to include, using predefined options or a
    * custom format string.
    * @param timezone A timezone offset (such as `'+0430'`), or a standard
-   * UTC/GMT or continental US timezone abbreviation. Default is
-   * the local system timezone of the end-user's machine.
+   * UTC/GMT or continental US timezone abbreviation.
+   * When not supplied, uses the end-user's local system timezone.
    * @param locale A locale code for the locale format rules to use.
    * When not supplied, uses the value of `LOCALE_ID`, which is `en-US` by default.
    * See [Setting your app locale](guide/i18n#setting-up-the-locale-of-your-app).
    * @returns A date string in the desired format.
    */
-  transform(value: any, format = 'mediumDate', timezone?: string, locale?: string): string|null {
+  transform(value: Date|string|number, format?: string, timezone?: string, locale?: string): string
+      |null;
+  transform(value: null|undefined, format?: string, timezone?: string, locale?: string): null;
+  transform(
+      value: Date|string|number|null|undefined, format?: string, timezone?: string,
+      locale?: string): string|null;
+  transform(
+      value: Date|string|number|null|undefined, format = 'mediumDate', timezone?: string,
+      locale?: string): string|null {
     if (value == null || value === '' || value !== value) return null;
 
     try {

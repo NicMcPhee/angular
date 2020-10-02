@@ -1,27 +1,28 @@
 /**
  * @license
- * Copyright Google Inc. All Rights Reserved.
+ * Copyright Google LLC All Rights Reserved.
  *
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
 
+import {HttpClient} from '@angular/common/http/src/client';
+import {HttpErrorResponse, HttpEventType, HttpResponse} from '@angular/common/http/src/response';
+import {HttpClientTestingBackend} from '@angular/common/http/testing/src/backend';
 import {ddescribe, describe, fit, it} from '@angular/core/testing/src/testing_internal';
 import {toArray} from 'rxjs/operators';
 
-import {HttpClient} from '../src/client';
-import {HttpErrorResponse, HttpEventType, HttpResponse} from '../src/response';
-import {HttpClientTestingBackend} from '../testing/src/backend';
-
 {
   describe('HttpClient', () => {
-    let client: HttpClient = null !;
-    let backend: HttpClientTestingBackend = null !;
+    let client: HttpClient = null!;
+    let backend: HttpClientTestingBackend = null!;
     beforeEach(() => {
       backend = new HttpClientTestingBackend();
       client = new HttpClient(backend);
     });
-    afterEach(() => { backend.verify(); });
+    afterEach(() => {
+      backend.verify();
+    });
     describe('makes a basic request', () => {
       it('for JSON data', done => {
         client.get('/test').subscribe(res => {
